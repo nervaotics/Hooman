@@ -51,9 +51,55 @@ npm run dev
 - **Org timezone:** `Asia/Karachi` (store UTC in MySQL; format in UI later)  
 - **First ZKTeco device:** Ground Floor Block-22 @ `192.168.0.21:4370`  
 
+## Server PC (XAMPP)
+
+On the **Server PC**, Hooman auto-starts **XAMPP MySQL** when the app launches (if MySQL is not already running). It looks for XAMPP in:
+
+- `C:\xampp` (default)
+- `D:\xampp`, `E:\xampp`
+- or `XAMPP_ROOT` / `XAMPP_PATH` environment variable
+
+Only **MySQL** is started (not Apache). Client PCs do not start XAMPP.
+
 ## Auto-updates
 
-`electron-builder.yml` uses a **generic** publish URL placeholder. After you create a GitHub repo and release pipeline, point `publish` to your update feed (or GitHub Releases via `electron-updater`).
+This app is configured for GitHub Releases via `electron-updater` and includes:
+
+- background update checks in packaged builds
+- silent download of updates
+- user prompt to install/restart when update is ready
+- Settings form to control update interval and behavior
+
+### Reliable release flow (recommended)
+
+To avoid unstable updates for office users, use this flow:
+
+1. Push code to `main` (CI runs lint + build only)
+2. Create a release from your machine:
+
+```bash
+npm run release:patch
+git push origin main
+git push origin v0.1.1
+```
+
+Or in one step:
+
+```bash
+npm run release:patch -- --push
+```
+
+3. GitHub Action `Build & Release` publishes installer + update metadata
+4. Installed clients fetch the new release automatically
+
+Other bump types: `npm run release:minor`, `npm run release:major`, or `node scripts/release.cjs 1.2.3`.
+
+Dry run: `node scripts/release.cjs patch --dry-run`
+
+### Required repo settings
+
+- Keep GitHub Releases enabled for this repository.
+- `GITHUB_TOKEN` is provided automatically in Actions (no extra secret needed for public/private repos you own).
 
 ## Troubleshooting
 

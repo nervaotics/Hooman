@@ -23,6 +23,26 @@ function dayBoundsUtc(dateStr, timeZone = ORG_TZ) {
   return { start, end }
 }
 
+function periodBoundsUtc(fromDateStr, toDateStr, timeZone = ORG_TZ) {
+  const { start } = dayBoundsUtc(fromDateStr, timeZone)
+  const { end } = dayBoundsUtc(toDateStr, timeZone)
+  return { start, end }
+}
+
+function parseDateKey(value) {
+  const raw = String(value || '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null
+  return raw
+}
+
+function daysBetweenInclusive(fromDateStr, toDateStr) {
+  const [y1, m1, d1] = fromDateStr.split('-').map(Number)
+  const [y2, m2, d2] = toDateStr.split('-').map(Number)
+  const a = Date.UTC(y1, m1 - 1, d1)
+  const b = Date.UTC(y2, m2 - 1, d2)
+  return Math.floor((b - a) / (24 * 60 * 60 * 1000)) + 1
+}
+
 function zonedLocalToUtc(localIso, timeZone) {
   const [datePart, timePart] = localIso.split('T')
   const [y, m, d] = datePart.split('-').map(Number)
@@ -58,4 +78,7 @@ module.exports = {
   localDateKey,
   formatTimeLocal,
   dayBoundsUtc,
+  periodBoundsUtc,
+  parseDateKey,
+  daysBetweenInclusive,
 }

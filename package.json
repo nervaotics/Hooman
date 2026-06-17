@@ -18,7 +18,11 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "migrate": "node electron/db/run-migrations.cjs",
-    "release": "npm run build && electron-builder --publish always",
+    "release": "npm run build && electron-builder --win --publish always -c.publish.provider=github -c.publish.owner=%GH_OWNER% -c.publish.repo=%GH_REPO%",
+    "release:patch": "node scripts/release.cjs patch",
+    "release:minor": "node scripts/release.cjs minor",
+    "release:major": "node scripts/release.cjs major",
+    "release:push": "node scripts/release.cjs patch --push",
     "postinstall": "node scripts/ensure-electron.cjs",
     "electron:install": "node node_modules/electron/install.js"
   },

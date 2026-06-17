@@ -9,7 +9,7 @@ function withAuth(payload = {}) {
 
 contextBridge.exposeInMainWorld('electron', {
   /** Bump when preload API surface changes (helps detect stale Electron sessions). */
-  apiVersion: 3,
+  apiVersion: 5,
 
   customTitleBar: process.platform === 'win32',
   titleBarHeight: 36,
@@ -68,7 +68,8 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('attendance:getLogs', withAuth(filters || {})),
   getDailyAttendance: (filters) =>
     ipcRenderer.invoke('attendance:getDaily', withAuth(filters || {})),
-  syncAttendance: () => ipcRenderer.invoke('attendance:sync', withAuth({})),
+  syncAttendance: (filters) =>
+    ipcRenderer.invoke('attendance:sync', withAuth(filters || {})),
   overrideAttendance: (data) =>
     ipcRenderer.invoke('attendance:override', withAuth(data || {})),
   getDeviceStatus: () =>
@@ -85,11 +86,29 @@ contextBridge.exposeInMainWorld('electron', {
   getLeaveBalances: (employeeId) =>
     ipcRenderer.invoke('leaves:balances', withAuth({ employeeId })),
 
-  runPayroll: (period) =>
-    ipcRenderer.invoke('payroll:run', withAuth({ period })),
-  getPayrollHistory: (filters) =>
-    ipcRenderer.invoke('payroll:history', withAuth(filters || {})),
-  getSalarySlip: (id) => ipcRenderer.invoke('payroll:slip', withAuth({ id })),
+  getPayrollPeriods: () => ipcRenderer.invoke('payroll:periods', withAuth({})),
+  getPayrollPeriod: (id) => ipcRenderer.invoke('payroll:period', withAuth({ id })),
+  createPayrollPeriod: (data) =>
+    ipcRenderer.invoke('payroll:createPeriod', withAuth(data || {})),
+  updatePayrollPeriod: (id, data) =>
+    ipcRenderer.invoke('payroll:updatePeriod', withAuth({ id, ...(data || {}) })),
+  deletePayrollPeriod: (id) =>
+    ipcRenderer.invoke('payroll:deletePeriod', withAuth({ id })),
+  processPayrollPeriod: (id) =>
+    ipcRenderer.invoke('payroll:processPeriod', withAuth({ id })),
+  updatePayrollRecord: (id, data) =>
+    ipcRenderer.invoke('payroll:updateRecord', withAuth({ id, ...(data || {}) })),
+  approvePayrollPeriod: (id) =>
+    ipcRenderer.invoke('payroll:approvePeriod', withAuth({ id })),
+  revertPayrollPeriod: (id) =>
+    ipcRenderer.invoke('payroll:revertPeriod', withAuth({ id })),
+  getPayrollStatutorySettings: () =>
+    ipcRenderer.invoke('payroll:statutorySettings', withAuth({})),
+  savePayrollStatutorySettings: (data) =>
+    ipcRenderer.invoke('payroll:saveStatutorySettings', withAuth(data || {})),
+  getPayrollPeriodAttendance: (periodId, employeeIds) =>
+    ipcRenderer.invoke('payroll:periodAttendance', withAuth({ periodId, employeeIds })),
+  getPayrollHistory: () => ipcRenderer.invoke('payroll:history', withAuth({})),
 
   getJobs: () => ipcRenderer.invoke('recruitment:getJobs', withAuth({})),
   createJob: (data) =>
@@ -118,5 +137,14 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('update-ready', listener)
     return () => ipcRenderer.removeListener('update-ready', listener)
   },
+  onUpdateStatus: (cb) => {
+    const listener = (_event, payload) => cb(payload)
+    ipcRenderer.on('update-status', listener)
+    return () => ipcRenderer.removeListener('update-status', listener)
+  },
+  getUpdaterSettings: () => ipcRenderer.invoke('updater:getSettings'),
+  saveUpdaterSettings: (payload) =>
+    ipcRenderer.invoke('updater:saveSettings', payload || {}),
+  checkUpdatesNow: () => ipcRenderer.invoke('updater:checkNow'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
 })

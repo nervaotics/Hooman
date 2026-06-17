@@ -34,7 +34,7 @@ module.exports = function registerDepartmentsIpc(ipcMain, store) {
   })
 
   ipcMain.handle('departments:create', async (_e, payload) => {
-    const auth = await authorize(store, payload, { module: 'employee_data', level: 'write' })
+    const auth = await authorize(store, payload, { superAdmin: true })
     const name = String(auth.clean.name || '').trim()
     if (!name) throw new Error('Name is required')
     const code = auth.clean.code ? String(auth.clean.code).trim() : null
@@ -50,7 +50,7 @@ module.exports = function registerDepartmentsIpc(ipcMain, store) {
   })
 
   ipcMain.handle('departments:update', async (_e, payload) => {
-    const auth = await authorize(store, payload, { module: 'employee_data', level: 'write' })
+    const auth = await authorize(store, payload, { superAdmin: true })
     if (!auth.clean.id) throw new Error('id required')
     const name = String(auth.clean.name || '').trim()
     if (!name) throw new Error('Name is required')
@@ -66,7 +66,7 @@ module.exports = function registerDepartmentsIpc(ipcMain, store) {
   })
 
   ipcMain.handle('departments:delete', async (_e, payload) => {
-    const auth = await authorize(store, payload, { module: 'employee_data', level: 'write' })
+    const auth = await authorize(store, payload, { superAdmin: true })
     if (!auth.clean.id) throw new Error('id required')
     const id = auth.clean.id
     const inPosting = await auth.knex('employee_postings').where({ department_id: id }).first()

@@ -4,16 +4,20 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
-      - run: npm run release
+      - run: npm run build
+      - run: npx electron-builder --win --publish always -c.publish.provider=github -c.publish.owner=${{ github.repository_owner }} -c.publish.repo=${{ github.event.repository.name }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

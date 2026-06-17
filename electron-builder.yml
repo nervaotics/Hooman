@@ -25,7 +25,3 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Hooman
-
-publish:
-  provider: generic
-  url: https://example.com/updates/

@@ -98,6 +98,15 @@ async function tryMigrateOnLaunch() {
 app.whenReady().then(async () => {
   nativeTheme.themeSource = 'dark'
   registerPhotoProtocol()
+
+  const { ensureXamppMysql } = require('./xampp.cjs')
+  const xamppResult = await ensureXamppMysql(store)
+  if (xamppResult.started) {
+    console.log('[Hooman] XAMPP MySQL is ready')
+  } else if (xamppResult.error) {
+    console.warn('[Hooman] XAMPP auto-start:', xamppResult.error)
+  }
+
   await tryMigrateOnLaunch()
 
   const win = createWindow()
@@ -117,6 +126,14 @@ app.whenReady().then(async () => {
   require('./ipc/payroll.ipc.cjs')(ipcMain, store)
   require('./ipc/recruitment.ipc.cjs')(ipcMain, store)
 
+  const updater = require('./updater.cjs')
+  ipcMain.handle('updater:getSettings', async () => updater.getSettings(store))
+  ipcMain.handle('updater:saveSettings', async (_e, payload = {}) => {
+    const next = updater.saveSettings(store, payload)
+    updater.schedulePeriodicChecks(win, store)
+    return next
+  })
+  ipcMain.handle('updater:checkNow', async () => updater.checkForUpdates(win, store))
   ipcMain.handle('updater:install', async () => {
     const { autoUpdater } = require('electron-updater')
     autoUpdater.quitAndInstall(false, true)
@@ -128,8 +145,7 @@ app.whenReady().then(async () => {
     require('./zkteco/poller.cjs').start(store)
   }
 
-  const { init } = require('./updater.cjs')
-  init(win)
+  updater.init(win, store)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

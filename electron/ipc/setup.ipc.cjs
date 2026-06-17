@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const mysql = require('mysql2/promise')
 const { getMergedDbConfig, runMigrations, pingDatabase } = require('../db/connection.cjs')
 const { checkProxyBypass } = require('../network-check.cjs')
+const { ensureXamppMysql } = require('../xampp.cjs')
 
 const REMOTE_USER = 'hrm_remote'
 const DEFAULT_REMOTE_PASSWORD =
@@ -74,6 +75,14 @@ module.exports = function registerSetupIpc(ipcMain, store) {
     store.set('db_config', roleDb)
     store.set('app_role', 'server')
     store.set('server_host_suggestion', '192.168.0.107')
+    store.set('auto_start_xampp', true)
+
+    const xamppResult = await ensureXamppMysql(store)
+    if (xamppResult.error === 'xampp-not-found') {
+      throw new Error(
+        'XAMPP MySQL was not found. Install XAMPP (default C:\\xampp) or start MySQL manually, then try again.',
+      )
+    }
 
     await pingDatabase(store)
     await runMigrations(store)

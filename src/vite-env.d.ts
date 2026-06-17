@@ -33,8 +33,32 @@ declare global {
         } | null
       }>
       getEmployees: (filters?: Record<string, unknown>) => Promise<unknown[]>
+      getPayrollPeriods: () => Promise<unknown[]>
+      getPayrollPeriod: (id: number) => Promise<{ period: Record<string, unknown>; records: unknown[] }>
+      createPayrollPeriod: (data: Record<string, unknown>) => Promise<{ period: Record<string, unknown> }>
+      updatePayrollPeriod: (id: number, data: Record<string, unknown>) => Promise<{ period: Record<string, unknown> }>
+      deletePayrollPeriod: (id: number) => Promise<{ ok: boolean }>
+      processPayrollPeriod: (id: number) => Promise<{
+        processed: number
+        skipped: number
+        totalEmployees: number
+        records?: unknown[]
+      }>
+      updatePayrollRecord: (
+        id: number,
+        data: { arrears?: number; deduction_amount?: number },
+      ) => Promise<{ ok: boolean }>
+      approvePayrollPeriod: (id: number) => Promise<{ ok: boolean }>
+      revertPayrollPeriod: (id: number) => Promise<{ ok: boolean }>
+      getPayrollStatutorySettings: () => Promise<Record<string, unknown>>
+      savePayrollStatutorySettings: (data: Record<string, unknown>) => Promise<Record<string, unknown>>
+      getPayrollPeriodAttendance: (
+        periodId: number,
+        employeeIds: number[],
+      ) => Promise<{ rows: unknown[] }>
+      getPayrollHistory: () => Promise<unknown[]>
       getAttendanceLogs: (filters?: Record<string, unknown>) => Promise<unknown[]>
-      syncAttendance: () => Promise<unknown>
+      syncAttendance: (filters?: { fromDate?: string; toDate?: string }) => Promise<unknown>
       getDeviceStatus: () => Promise<
         Array<{
           id: string

@@ -32,13 +32,35 @@ module.exports = function registerAttendanceIpc(ipcMain, store) {
     const auth = await authorize(store, payload, { module: 'employee_data', level: 'write' })
     const devices = store.get('zkteco_devices', DEFAULT_DEVICES)
     const active = devices.filter((d) => d.enabled)
+    const syncOptions = {
+      fromDate: auth.clean.fromDate,
+      toDate: auth.clean.toDate,
+    }
     const results = []
     for (const d of active) {
       // eslint-disable-next-line no-await-in-loop
-      results.push(await pullFromDevice(d, store))
+      results.push(await pullFromDevice(d, store, syncOptions))
     }
-    await attendanceService.linkAttendanceEmployeeIds(auth.knex)
-    return { results }
+    const linked = await attendanceService.linkAttendanceEmployeeIds(auth.knex)
+    const totals = results.reduce(
+      (acc, r) => {
+        if (!r.success) return acc
+        acc.fetchedFromDevice += Number(r.fetchedFromDevice ?? r.count ?? 0)
+        acc.inPeriod += Number(r.inPeriod ?? r.count ?? 0)
+        acc.savedToDatabase += Number(r.savedToDatabase ?? r.count ?? 0)
+        return acc
+      },
+      { fetchedFromDevice: 0, inPeriod: 0, savedToDatabase: 0 },
+    )
+    return {
+      results,
+      linked,
+      period:
+        syncOptions.fromDate && syncOptions.toDate
+          ? { fromDate: syncOptions.fromDate, toDate: syncOptions.toDate }
+          : null,
+      totals,
+    }
   })
 
   ipcMain.handle('attendance:override', async (_e, payload) => {

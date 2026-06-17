@@ -12,11 +12,26 @@ const {
  */
 module.exports = function registerBootstrapIpc(ipcMain, store) {
   ipcMain.handle('bootstrap:status', async () => {
-    const appRole = store.get('app_role', null)
+    const savedDb = store.get('db_config', null)
+    const hasSavedDbConfig = Boolean(
+      savedDb?.host && savedDb?.database && savedDb?.user !== undefined && savedDb?.user !== null,
+    )
+    let appRole = store.get('app_role', null)
     const merged = getMergedDbConfig(store)
     const hasDbConfig = isDbConfigComplete(merged)
-    const inferredRole = appRole || (String(merged.host || '').startsWith('127.') || merged.host === 'localhost' ? 'server' : 'client')
-    const needsRoleSetup = !appRole && !hasDbConfig
+
+    if (!appRole && hasSavedDbConfig) {
+      const host = String(merged.host || '').toLowerCase()
+      appRole = host === '127.0.0.1' || host === 'localhost' ? 'server' : 'client'
+      store.set('app_role', appRole)
+    }
+
+    const needsRoleSetup = !appRole && !hasSavedDbConfig
+    const inferredRole =
+      appRole ||
+      (String(merged.host || '').startsWith('127.') || merged.host === 'localhost'
+        ? 'server'
+        : 'client')
     if (!hasDbConfig) {
       return {
         appRole: inferredRole,

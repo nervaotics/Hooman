@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Building2, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore.js'
-import { canWrite } from '@/lib/permissions.js'
+import { isSuperAdmin } from '@/lib/permissions.js'
 
 const emptyForm = () => ({ name: '', code: '' })
 
@@ -172,7 +172,7 @@ function EntityPanel({
 
 export default function OrganizationPage() {
   const user = useAuthStore((s) => s.user)
-  const canEdit = canWrite(user, 'employee_data')
+  const canEdit = isSuperAdmin(user)
   const [tab, setTab] = useState('departments')
   const [departments, setDepartments] = useState([])
   const [areas, setAreas] = useState([])

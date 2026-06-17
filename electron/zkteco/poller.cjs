@@ -1,6 +1,11 @@
 const cron = require('node-cron')
 const Store = require('electron-store')
 const { DEFAULT_DEVICES } = require('./devices.cjs')
+const {
+  periodBoundsUtc,
+  parseDateKey,
+  daysBetweenInclusive,
+} = require('../lib/timezone.cjs')
 
 let lastPollResults = []
 
@@ -32,10 +37,31 @@ function promisifyDisconnect(zk) {
   })
 }
 
+const MAX_SYNC_DAYS = 366
+
+function resolveSyncPeriod(options = {}) {
+  const fromDate = parseDateKey(options.fromDate)
+  const toDate = parseDateKey(options.toDate)
+  if (!fromDate && !toDate) return null
+  if (!fromDate || !toDate) {
+    throw new Error('Both fromDate and toDate are required for period sync (YYYY-MM-DD)')
+  }
+  if (fromDate > toDate) {
+    throw new Error('fromDate must be on or before toDate')
+  }
+  const dayCount = daysBetweenInclusive(fromDate, toDate)
+  if (dayCount > MAX_SYNC_DAYS) {
+    throw new Error(`Period cannot exceed ${MAX_SYNC_DAYS} days`)
+  }
+  const { start, end } = periodBoundsUtc(fromDate, toDate)
+  return { fromDate, toDate, start, end, dayCount }
+}
+
 /**
  * @param {import('electron-store')} store
+ * @param {{ fromDate?: string, toDate?: string }} [options]
  */
-async function pullFromDevice(device, store) {
+async function pullFromDevice(device, store, options = {}) {
   let ZKLib
   try {
     ZKLib = require('zklib')
@@ -93,9 +119,17 @@ async function pullFromDevice(device, store) {
       if (row.employee_code) punchMap.set(String(row.employee_code).trim(), row.id)
     }
 
+    const period = resolveSyncPeriod(options)
+    let saved = 0
+    let inPeriod = 0
+
     for (const log of logs) {
       const punchTime =
         log.timestamp instanceof Date ? log.timestamp : new Date(log.timestamp)
+      if (Number.isNaN(punchTime.getTime())) continue
+      if (period && (punchTime < period.start || punchTime > period.end)) continue
+      inPeriod += 1
+
       const raw = JSON.stringify(log)
       const deviceUserId = String(log.uid ?? log.id ?? '').trim()
       const employeeId = punchMap.get(deviceUserId) ?? null
@@ -104,6 +138,7 @@ async function pullFromDevice(device, store) {
         (device_id, employee_device_id, employee_id, punch_time, punch_type, raw_data, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
       `
+      // eslint-disable-next-line no-await-in-loop
       await knex.raw(q, [
         device.id,
         deviceUserId,
@@ -112,11 +147,16 @@ async function pullFromDevice(device, store) {
         log.state ?? 0,
         raw,
       ])
+      saved += 1
     }
 
     return {
       success: true,
-      count: logs.length,
+      count: period ? inPeriod : logs.length,
+      fetchedFromDevice: logs.length,
+      savedToDatabase: saved,
+      inPeriod: period ? inPeriod : logs.length,
+      period: period ? { fromDate: period.fromDate, toDate: period.toDate } : null,
       device: device.name,
       ip: device.ip,
       syncing: false,

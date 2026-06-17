@@ -26,7 +26,7 @@ const nav = [
     module: 'employee_data',
   },
   { to: '/employees', label: 'Employees', icon: Users, module: 'employee_data' },
-  { to: '/organization', label: 'Departments & Sites', icon: Building2, module: 'employee_data' },
+  { to: '/organization', label: 'Departments & Sites', icon: Building2, superAdmin: true },
   { to: '/attendance', label: 'Attendance', icon: Clock, module: 'employee_data' },
   { to: '/leaves', label: 'Leaves', icon: Palmtree, module: 'employee_data' },
   { to: '/payroll', label: 'Payroll', icon: Wallet, module: 'payroll_processing' },

@@ -14,6 +14,8 @@ import EmployeeView from '@/pages/employees/EmployeeView.jsx'
 import AttendancePage from '@/pages/attendance/AttendancePage.jsx'
 import OrganizationPage from '@/pages/organization/OrganizationPage.jsx'
 import ModulePlaceholder from '@/pages/ModulePlaceholder.jsx'
+import PayrollPage from '@/pages/payroll/PayrollPage.jsx'
+import PayrollProcessingPage from '@/pages/payroll/PayrollProcessingPage.jsx'
 import SettingsPage from '@/pages/settings/SettingsPage.jsx'
 import SettingsOverview from '@/pages/settings/SettingsOverview.jsx'
 import DatabaseSettings from '@/pages/settings/DatabaseSettings.jsx'
@@ -49,7 +51,6 @@ export default function App() {
               } />
               <Route path="employees" element={<EmployeeList />} />
               <Route path="employees/:id" element={<EmployeeView />} />
-              <Route path="organization" element={<OrganizationPage />} />
               <Route path="attendance" element={<AttendancePage />} />
               <Route
                 path="leaves"
@@ -68,15 +69,8 @@ export default function App() {
             </Route>
 
             <Route element={<RequireModuleAccess module="payroll_processing" />}>
-              <Route
-                path="payroll"
-                element={
-                  <ModulePlaceholder
-                    title="Payroll"
-                    description="Payroll runs and slips tables are ready; computation rules come next."
-                  />
-                }
-              />
+              <Route path="payroll" element={<PayrollPage />} />
+              <Route path="payroll/processing" element={<PayrollProcessingPage />} />
             </Route>
 
             <Route
@@ -99,6 +93,7 @@ export default function App() {
             />
 
             <Route element={<RequireSuperAdmin />}>
+              <Route path="organization" element={<OrganizationPage />} />
               <Route path="settings" element={<SettingsPage />}>
                 <Route index element={<SettingsOverview />} />
                 <Route path="users" element={<UserManagement />} />
