@@ -1,6 +1,7 @@
+const { getMigrationsDirectory } = require('./migrationsDir.cjs')
+
 require('dotenv').config()
 
-const path = require('path')
 const knex = require('knex')({
   client: 'mysql2',
   connection: {
@@ -12,7 +13,8 @@ const knex = require('knex')({
     timezone: 'Z',
   },
   migrations: {
-    directory: path.join(__dirname, 'migrations'),
+    directory: getMigrationsDirectory(),
+    loadExtensions: ['.cjs', '.js'],
   },
 })
 

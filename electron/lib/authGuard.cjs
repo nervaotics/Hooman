@@ -1,6 +1,6 @@
 const { stripToken } = require('./ipcPayload.cjs')
 const { verifyToken } = require('./jwt.cjs')
-const { getOrCreateKnex, runMigrations } = require('../db/connection.cjs')
+const { getOrCreateKnex, ensureMigrations } = require('../db/connection.cjs')
 const { canAccess, isSuperAdmin, permissionsForClient } = require('./permissions.cjs')
 
 function unauthorized(message = 'Unauthorized') {
@@ -39,7 +39,7 @@ function serializeUser(row) {
  * @param {{ module?: string, level?: 'read'|'write', superAdmin?: boolean }} opts
  */
 async function authorize(store, payload, opts = {}) {
-  await runMigrations(store)
+  await ensureMigrations(store)
   const knex = getOrCreateKnex(store)
   const { token, clean } = stripToken(payload)
   const decoded = verifyToken(token)
@@ -68,7 +68,7 @@ async function authorize(store, payload, opts = {}) {
  * Settings during first-time setup (no users yet) skip auth.
  */
 async function authorizeSettings(store, payload) {
-  await runMigrations(store)
+  await ensureMigrations(store)
   const knex = getOrCreateKnex(store)
   const countRow = await knex('users').count('* as cnt').first()
   if (Number(countRow?.cnt ?? 0) === 0) {

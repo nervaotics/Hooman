@@ -2,8 +2,8 @@ const {
   getMergedDbConfig,
   isDbConfigComplete,
   pingDatabase,
-  runMigrations,
   getOrCreateKnex,
+  ensureMigrations,
 } = require('../db/connection.cjs')
 
 /**
@@ -60,7 +60,7 @@ module.exports = function registerBootstrapIpc(ipcMain, store) {
     }
 
     try {
-      await runMigrations(store)
+      await ensureMigrations(store)
     } catch (err) {
       return {
         appRole: inferredRole,

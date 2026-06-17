@@ -1,6 +1,9 @@
 require('dotenv').config()
 
-const path = require('path')
+const {
+  getMigrationsDirectory,
+  formatMigrationBundleError,
+} = require('./migrationsDir.cjs')
 
 /**
  * @param {import('electron-store')} store
@@ -35,6 +38,7 @@ function getKnex(store) {
   if (!isDbConfigComplete(cfg)) {
     throw new Error('Database is not configured')
   }
+  const migrationsDirectory = getMigrationsDirectory()
   return knex({
     client: 'mysql2',
     connection: {
@@ -47,13 +51,17 @@ function getKnex(store) {
     },
     pool: { min: 0, max: 10 },
     migrations: {
-      directory: path.join(__dirname, 'migrations'),
+      directory: migrationsDirectory,
+      loadExtensions: ['.cjs', '.js'],
     },
   })
 }
 
 let knexSingleton = null
 let knexSignature = ''
+/** @type {Promise<void> | null} */
+let migrationFlight = null
+let migrationsReady = false
 
 /**
  * @param {import('electron-store')} store
@@ -77,14 +85,48 @@ async function resetKnex() {
     knexSingleton = null
     knexSignature = ''
   }
+  migrationFlight = null
+  migrationsReady = false
 }
 
 /**
+ * Run pending migrations once per process (serialized — avoids knex lock races).
  * @param {import('electron-store')} store
+ * @param {{ force?: boolean }} [opts]
  */
+async function ensureMigrations(store, opts = {}) {
+  if (migrationsReady && !opts.force) return
+  if (migrationFlight) return migrationFlight
+
+  migrationFlight = (async () => {
+    const migrationsDirectory = getMigrationsDirectory()
+    const k = getOrCreateKnex(store)
+    try {
+      try {
+        await k.migrate.latest()
+      } catch (err) {
+        const msg = String(err?.message || err || '')
+        if (/already locked/i.test(msg)) {
+          await k.migrate.forceFreeMigrationsLock()
+          await k.migrate.latest()
+        } else {
+          throw err
+        }
+      }
+      migrationsReady = true
+    } catch (err) {
+      throw new Error(formatMigrationBundleError(err, migrationsDirectory))
+    } finally {
+      migrationFlight = null
+    }
+  })()
+
+  return migrationFlight
+}
+
+/** @deprecated Use ensureMigrations */
 async function runMigrations(store) {
-  const k = getOrCreateKnex(store)
-  await k.migrate.latest()
+  return ensureMigrations(store, { force: true })
 }
 
 /**
@@ -108,6 +150,7 @@ module.exports = {
   getKnex,
   getOrCreateKnex,
   resetKnex,
+  ensureMigrations,
   runMigrations,
   pingDatabase,
 }

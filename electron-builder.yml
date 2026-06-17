@@ -5,6 +5,9 @@ copyright: Copyright © 2026
 directories:
   output: release
 
+asarUnpack:
+  - electron/db/migrations/**
+
 files:
   - dist/**/*
   - electron/**/*

@@ -82,13 +82,13 @@ async function tryMigrateOnLaunch() {
     getMergedDbConfig,
     isDbConfigComplete,
     pingDatabase,
-    runMigrations,
+    ensureMigrations,
   } = require('./db/connection.cjs')
   try {
     const merged = getMergedDbConfig(store)
     if (!isDbConfigComplete(merged)) return
     await pingDatabase(store)
-    await runMigrations(store)
+    await ensureMigrations(store)
     console.log('[Hooman] Database migrations OK')
   } catch (e) {
     console.warn('[Hooman] Startup migration skipped:', e.message)
