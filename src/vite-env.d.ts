@@ -98,12 +98,6 @@ interface ElectronApi {
 
   getDashboardStats: () => Promise<Record<string, unknown>>
 
-  getLeaveRequests: (filters?: Record<string, unknown>) => Promise<unknown[]>
-  applyLeave: (data: Record<string, unknown>) => Promise<Record<string, unknown>>
-  approveLeave: (id: number) => Promise<Record<string, unknown>>
-  rejectLeave: (id: number, reason?: string) => Promise<Record<string, unknown>>
-  getLeaveBalances: (employeeId: number) => Promise<Record<string, unknown>>
-
   getPayrollPeriods: () => Promise<unknown[]>
   getPayrollPeriod: (id: number) => Promise<{ period: Record<string, unknown>; records: unknown[] }>
   createPayrollPeriod: (data: Record<string, unknown>) => Promise<{ period: Record<string, unknown> }>
@@ -128,6 +122,30 @@ interface ElectronApi {
     employeeIds: number[],
   ) => Promise<{ rows: unknown[] }>
   getPayrollHistory: () => Promise<unknown[]>
+
+  getAccountingMeta: () => Promise<{
+    accountTypes: string[]
+    voucherTypes: string[]
+    voucherLabels: Record<string, string>
+  }>
+  getAccountingAccounts: (filters?: Record<string, unknown>) => Promise<unknown[]>
+  getAccountingAccount: (id: number) => Promise<Record<string, unknown> | null>
+  createAccountingAccount: (data: Record<string, unknown>) => Promise<Record<string, unknown>>
+  updateAccountingAccount: (
+    id: number,
+    data: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>
+  getAccountingVouchers: (filters?: Record<string, unknown>) => Promise<unknown[]>
+  getAccountingVoucher: (id: number) => Promise<Record<string, unknown> | null>
+  createAccountingVoucher: (data: Record<string, unknown>) => Promise<Record<string, unknown>>
+  voidAccountingVoucher: (id: number) => Promise<{ ok: boolean }>
+  getAccountingLedger: (filters: {
+    accountId: number
+    fromDate?: string
+    toDate?: string
+  }) => Promise<Record<string, unknown>>
+  getTrialBalance: (asOfDate?: string) => Promise<Record<string, unknown>>
+  getBalanceSheet: (asOfDate?: string) => Promise<Record<string, unknown>>
 
   getJobs: () => Promise<unknown[]>
   createJob: (data: Record<string, unknown>) => Promise<Record<string, unknown>>

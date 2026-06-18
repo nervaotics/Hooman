@@ -63,12 +63,13 @@ export default function EmployeeBulkImport() {
         </p>
 
         <div className="mt-3 rounded-md border border-border bg-sidebar/50 p-3 font-mono text-xs text-muted">
-          punch_code,name,cnic,phone,area,department
+          punch_code,name,cnic,phone,area,department,salary
         </div>
 
         <ul className="mt-3 list-inside list-disc space-y-1 text-xs text-muted">
           <li>CNIC: 61101-089160-3 or 12345-123456-1</li>
           <li>Phone: 0300-1234567 or 0334-7359797</li>
+          <li>Salary: optional monthly gross (PKR), e.g. 45000 — used for payroll</li>
           <li>Area/site and department are created if they do not exist</li>
         </ul>
 
@@ -108,7 +109,8 @@ export default function EmployeeBulkImport() {
               <ul className="mt-2 space-y-1 text-muted">
                 {result.rows.map((r) => (
                   <li key={`${r.line}-${r.employee_id}`}>
-                    Row {r.line}: {r.employee_id} — {r.name} (punch {r.punch_code})
+                    Row {r.line}: {r.employee_id} — {r.name} (punch {r.punch_code}
+                    {r.salary != null ? `, PKR ${Number(r.salary).toLocaleString()}` : ''})
                   </li>
                 ))}
               </ul>

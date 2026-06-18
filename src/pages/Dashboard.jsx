@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Calendar,
   Clock,
   RefreshCw,
   Sparkles,
@@ -67,7 +66,6 @@ function Sparkline({ points }) {
 const emptyStats = {
   totalEmployees: 0,
   presentToday: 0,
-  pendingLeaves: 0,
   pendingPayroll: 0,
   devicesOnline: 0,
   devicesTotal: 0,
@@ -76,7 +74,6 @@ const emptyStats = {
 const emptySummary = {
   present: 0,
   absent: 0,
-  onLeave: 0,
   halfDay: 0,
   sundayOff: 0,
   total: 0,
@@ -164,13 +161,6 @@ export default function Dashboard() {
       hint: 'Checked in via device',
       to: '/attendance',
       icon: Clock,
-    },
-    showEmployees && {
-      label: 'Pending leave',
-      value: stats.pendingLeaves,
-      hint: 'Awaiting approval',
-      to: '/leaves',
-      icon: Calendar,
     },
     showPayroll && {
       label: 'Payroll in progress',
@@ -264,7 +254,6 @@ export default function Dashboard() {
               ['Present', attendanceSummary.present],
               ['Absent', attendanceSummary.absent],
               ['Sunday off', attendanceSummary.sundayOff],
-              ['On leave', attendanceSummary.onLeave],
               ['Half day', attendanceSummary.halfDay],
               ['Roster', attendanceSummary.total],
             ].map(([label, value]) => (

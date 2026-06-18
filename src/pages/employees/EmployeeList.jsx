@@ -210,16 +210,16 @@ export default function EmployeeList() {
         </div>
       ) : viewMode === 'table' ? (
         <div className="overflow-auto rounded-lg border border-border">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-sidebar text-xs uppercase text-muted">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-sidebar text-[10px] uppercase tracking-wide text-muted">
               <tr>
-                <th className="px-4 py-3">Code</th>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Department</th>
-                <th className="px-4 py-3">Site</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-3 py-2">Code</th>
+                <th className="px-3 py-2">Name</th>
+                <th className="px-3 py-2">Type</th>
+                <th className="px-3 py-2">Department</th>
+                <th className="px-3 py-2">Site</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -229,38 +229,38 @@ export default function EmployeeList() {
                   className="cursor-pointer border-t border-border hover:bg-white/5"
                   onClick={() => navigate(`/employees/${emp.id}`)}
                 >
-                  <td className="px-4 py-3 font-mono text-xs">{emp.employee_code}</td>
-                  <td className="px-4 py-3 font-medium text-foreground">{emp.name}</td>
-                  <td className="px-4 py-3 text-muted">{emp.employee_type || '—'}</td>
-                  <td className="px-4 py-3 text-muted">{emp.current_department || '—'}</td>
-                  <td className="px-4 py-3 text-muted">{emp.current_area || '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs capitalize">
+                  <td className="px-3 py-2 font-mono text-[11px] text-muted">{emp.employee_code}</td>
+                  <td className="px-3 py-2 text-xs font-medium text-foreground">{emp.name}</td>
+                  <td className="px-3 py-2 text-xs text-muted">{emp.employee_type || '—'}</td>
+                  <td className="px-3 py-2 text-xs text-muted">{emp.current_department || '—'}</td>
+                  <td className="px-3 py-2 text-xs text-muted">{emp.current_area || '—'}</td>
+                  <td className="px-3 py-2">
+                    <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] capitalize">
                       {emp.status || 'active'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                     {canEditEmployees ? (
-                      <div className="inline-flex gap-1">
+                      <div className="inline-flex gap-0.5">
                         <button
                           type="button"
-                          className="rounded p-1.5 text-muted hover:bg-white/10 hover:text-foreground"
+                          className="rounded p-1 text-muted hover:bg-white/10 hover:text-foreground"
                           onClick={() => navigate(`/employees/${emp.id}/edit`)}
                           aria-label="Edit"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
                           type="button"
-                          className="rounded p-1.5 text-muted hover:bg-danger/20 hover:text-danger"
+                          className="rounded p-1 text-muted hover:bg-danger/20 hover:text-danger"
                           onClick={() => handleDelete(emp)}
                           aria-label="Delete"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     ) : (
-                      <span className="text-xs text-muted">—</span>
+                      <span className="text-[10px] text-muted">—</span>
                     )}
                   </td>
                 </tr>
@@ -269,34 +269,34 @@ export default function EmployeeList() {
           </table>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {employees.map((emp) => (
             <article
               key={emp.id}
-              className="cursor-pointer rounded-lg border border-border bg-card p-4 hover:border-accent/50"
+              className="cursor-pointer rounded-lg border border-border bg-card p-3 hover:border-accent/50"
               onClick={() => navigate(`/employees/${emp.id}`)}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="font-mono text-xs text-muted">{emp.employee_code}</div>
-                  <h2 className="mt-1 font-semibold text-foreground">{emp.name}</h2>
+                  <div className="font-mono text-[10px] text-muted">{emp.employee_code}</div>
+                  <h2 className="mt-0.5 text-sm font-medium text-foreground">{emp.name}</h2>
                 </div>
-                <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs capitalize">
+                <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] capitalize">
                   {emp.status || 'active'}
                 </span>
               </div>
-              <dl className="mt-4 space-y-1 text-xs text-muted">
-                <div className="flex justify-between">
+              <dl className="mt-3 space-y-0.5 text-[11px] text-muted">
+                <div className="flex justify-between gap-2">
                   <dt>Type</dt>
-                  <dd className="text-foreground">{emp.employee_type || '—'}</dd>
+                  <dd className="text-right text-foreground">{emp.employee_type || '—'}</dd>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-2">
                   <dt>Department</dt>
-                  <dd className="text-foreground">{emp.current_department || '—'}</dd>
+                  <dd className="text-right text-foreground">{emp.current_department || '—'}</dd>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-2">
                   <dt>Site</dt>
-                  <dd className="text-foreground">{emp.current_area || '—'}</dd>
+                  <dd className="text-right text-foreground">{emp.current_area || '—'}</dd>
                 </div>
               </dl>
             </article>

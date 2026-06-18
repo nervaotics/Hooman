@@ -24,13 +24,19 @@ import { computeSalaryProcessingMetrics, formatGenderShort } from '@/lib/salaryP
 
 const roundMoney2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
+const fieldClass =
+  'w-full rounded-md border border-border bg-sidebar px-3 py-2 text-sm text-foreground outline-none focus:border-accent'
+const labelClass = 'mb-1 block text-xs font-medium text-muted'
+const btnSecondary =
+  'inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-white/5 disabled:opacity-50'
+
 function statusClass(status) {
   const s = String(status || '').toLowerCase()
-  if (s === 'draft') return 'bg-slate-100 text-slate-700'
-  if (s === 'processing') return 'bg-amber-100 text-amber-800'
-  if (s === 'approved') return 'bg-emerald-100 text-emerald-800'
-  if (s === 'paid') return 'bg-blue-100 text-blue-800'
-  return 'bg-slate-100 text-slate-600'
+  if (s === 'draft') return 'bg-slate-500/20 text-slate-300'
+  if (s === 'processing') return 'bg-amber-500/20 text-amber-300'
+  if (s === 'approved') return 'bg-emerald-500/20 text-emerald-300'
+  if (s === 'paid') return 'bg-blue-500/20 text-blue-300'
+  return 'bg-slate-500/20 text-muted'
 }
 
 function formatAmount(n) {
@@ -413,21 +419,21 @@ export default function PayrollProcessingPage() {
   const periodFormFields = (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Period Name *</span>
+        <span className={labelClass}>Period Name *</span>
         <input
           type="text"
           value={formData.period_name}
           onChange={(e) => setFormData({ ...formData, period_name: e.target.value })}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className={fieldClass}
           placeholder="e.g., January 2026"
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Month *</span>
+        <span className={labelClass}>Month *</span>
         <select
           value={formData.period_month}
           onChange={(e) => applyMonthYear(parseInt(e.target.value, 10), formData.period_year)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className={fieldClass}
         >
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
             <option key={m} value={m}>
@@ -437,7 +443,7 @@ export default function PayrollProcessingPage() {
         </select>
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Year *</span>
+        <span className={labelClass}>Year *</span>
         <input
           type="number"
           value={formData.period_year}
@@ -446,34 +452,34 @@ export default function PayrollProcessingPage() {
           }
           min="2020"
           max="2100"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className={fieldClass}
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Start Date *</span>
+        <span className={labelClass}>Start Date *</span>
         <input
           type="date"
           value={formData.start_date}
           onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className={fieldClass}
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">End Date *</span>
+        <span className={labelClass}>End Date *</span>
         <input
           type="date"
           value={formData.end_date}
           onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className={fieldClass}
         />
       </label>
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Payroll Date *</span>
+        <span className={labelClass}>Payroll Date *</span>
         <input
           type="date"
           value={formData.payroll_date}
           onChange={(e) => setFormData({ ...formData, payroll_date: e.target.value })}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className={fieldClass}
         />
       </label>
     </div>
@@ -484,25 +490,25 @@ export default function PayrollProcessingPage() {
       <div className="flex flex-wrap items-start gap-4 print:hidden">
         <Link
           to="/payroll"
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+          className={btnSecondary}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Payroll
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="text-2xl font-semibold text-foreground">
             {currentPeriod ? 'Edit Payroll Period' : 'Create Payroll Period'}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted">
             {currentPeriod ? 'View and process payroll records' : 'Set up a new payroll period'}
           </p>
         </div>
       </div>
 
       {!currentPeriod ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Period Details</h2>
-          <p className="mt-2 text-sm text-slate-500">
+        <div className="rounded-lg border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">Period Details</h2>
+          <p className="mt-2 text-sm text-muted">
             Default pay cycle: <strong>21st</strong> of the previous calendar month through{' '}
             <strong>20th</strong> of the selected month (e.g. June = 21 May–20 Jun). Salary divisor
             excludes Saturdays and Sundays.
@@ -513,13 +519,13 @@ export default function PayrollProcessingPage() {
               type="button"
               onClick={handleCreatePeriod}
               disabled={loading || !canProcess}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="btn-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {loading ? 'Creating…' : 'Create Period'}
             </button>
             <Link
               to="/payroll"
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-white/5"
             >
               Cancel
             </Link>
@@ -528,9 +534,9 @@ export default function PayrollProcessingPage() {
       ) : (
         <>
           {payrollRecords.length > 0 && (
-            <div className="hidden rounded-xl border border-slate-200 bg-white p-4 print:block">
-              <h2 className="text-lg font-semibold">Payroll register</h2>
-              <div className="mt-2 grid gap-1 text-sm text-slate-700 sm:grid-cols-2">
+            <div className="hidden rounded-lg border border-border bg-card p-4 print:block">
+              <h2 className="text-lg font-semibold text-foreground">Payroll register</h2>
+              <div className="mt-2 grid gap-1 text-sm text-muted sm:grid-cols-2">
                 <p>
                   <strong>Period</strong>{' '}
                   {canEditPeriodMeta ? formData.period_name?.trim() || currentPeriod.period_name : currentPeriod.period_name}
@@ -558,7 +564,7 @@ export default function PayrollProcessingPage() {
             </div>
           )}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm print:hidden">
+          <div className="rounded-lg border border-border bg-card p-6 print:hidden">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusClass(currentPeriod.status)}`}
@@ -570,7 +576,7 @@ export default function PayrollProcessingPage() {
                   <button
                     type="button"
                     onClick={handlePrintPayroll}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className={btnSecondary}
                   >
                     <Printer className="h-4 w-4" />
                     Print
@@ -581,7 +587,7 @@ export default function PayrollProcessingPage() {
                     type="button"
                     onClick={handleProcessPayroll}
                     disabled={processing || loading}
-                    className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    className="btn-primary inline-flex items-center gap-2 px-3 py-2 text-sm font-medium disabled:opacity-50"
                   >
                     <Play className="h-4 w-4" />
                     {processing ? 'Processing…' : 'Process Payroll'}
@@ -592,7 +598,7 @@ export default function PayrollProcessingPage() {
                     type="button"
                     onClick={handleApprovePeriod}
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Approve Period
@@ -603,7 +609,7 @@ export default function PayrollProcessingPage() {
                     type="button"
                     onClick={handleRevertToDraft}
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    className={`${btnSecondary} disabled:opacity-50`}
                   >
                     <RotateCcw className="h-4 w-4" />
                     Revert to Draft
@@ -614,7 +620,7 @@ export default function PayrollProcessingPage() {
                     type="button"
                     onClick={handleDeletePeriod}
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-md border border-red-500/30 px-3 py-2 text-sm text-danger hover:bg-red-500/10 disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete period
@@ -625,7 +631,7 @@ export default function PayrollProcessingPage() {
 
             {canEditPeriodMeta ? (
               <div className="mt-6">
-                <p className="mb-4 text-sm text-slate-500">
+                <p className="mb-4 text-sm text-muted">
                   Update period name and dates while status is Draft or Processing. Save before processing
                   if you changed the cycle window.
                 </p>
@@ -634,18 +640,18 @@ export default function PayrollProcessingPage() {
                   type="button"
                   onClick={handleSavePeriodDetails}
                   disabled={loading}
-                  className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="btn-primary mt-4 px-4 py-2 text-sm font-medium disabled:opacity-50"
                 >
                   Save period details
                 </button>
               </div>
             ) : (
               <div className="mt-6">
-                <h3 className="text-lg font-semibold text-slate-900">{currentPeriod.period_name}</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="text-lg font-semibold text-foreground">{currentPeriod.period_name}</h3>
+                <p className="text-sm text-muted">
                   {getMonthName(currentPeriod.period_month)} {currentPeriod.period_year}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600">
+                <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted">
                   <span className="inline-flex items-center gap-1.5">
                     <Calendar className="h-4 w-4" />
                     {formatShortDate(currentPeriod.start_date)} — {formatShortDate(currentPeriod.end_date)}
@@ -660,38 +666,38 @@ export default function PayrollProcessingPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 print:hidden">
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <Users className="h-5 w-5 text-slate-500" />
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
+              <Users className="h-5 w-5 text-muted" />
               <div>
-                <p className="text-xs font-medium uppercase text-slate-500">Employees</p>
-                <p className="text-xl font-semibold text-slate-900">{payrollRecords.length}</p>
+                <p className="text-xs font-medium uppercase text-muted">Employees</p>
+                <p className="text-xl font-semibold text-foreground">{payrollRecords.length}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <DollarSign className="h-5 w-5 text-slate-500" />
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
+              <DollarSign className="h-5 w-5 text-muted" />
               <div>
-                <p className="text-xs font-medium uppercase text-slate-500">Total Amount</p>
-                <p className="text-xl font-semibold text-slate-900">{formatAmount(calculateTotal())}</p>
+                <p className="text-xs font-medium uppercase text-muted">Total Amount</p>
+                <p className="text-xl font-semibold text-foreground">{formatAmount(calculateTotal())}</p>
               </div>
             </div>
           </div>
 
           {payrollRecords.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 print:hidden">
+            <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center text-sm text-muted print:hidden">
               No payroll records yet. Click &quot;Process Payroll&quot; to calculate salaries for active
               employees with salary structures.
             </div>
           ) : (
             <>
-              <p className="text-sm text-slate-500 print:hidden">
+              <p className="text-sm text-muted print:hidden">
                 <strong>Rules:</strong> Monthly ÷ 26 = rate per day; hourly base = Monthly ÷ 26 ÷ 8. Overtime
                 rate = hourly base × 2. Holiday rate = hourly base × 3 (Sundays when attended). Late
                 deduction = hourly base × late hours (after 08:10). EOBI (1%) applies to net where
                 configured. Arrears and deductions are editable in Draft; saved on blur.
               </p>
-              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                <table className="min-w-[2400px] divide-y divide-slate-200 text-xs">
-                  <thead className="bg-slate-50">
+              <div className="overflow-x-auto rounded-lg border border-border bg-card">
+                <table className="min-w-[2400px] text-xs">
+                  <thead className="bg-sidebar text-muted">
                     <tr>
                       {[
                         'Emp. Code',
@@ -721,13 +727,13 @@ export default function PayrollProcessingPage() {
                         'Net',
                         'Status',
                       ].map((h) => (
-                        <th key={h} className="whitespace-nowrap px-2 py-2 text-left font-medium text-slate-600">
+                        <th key={h} className="whitespace-nowrap px-2 py-2 text-left font-medium uppercase">
                           {h}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody>
                     {salaryGridRows.map(({ record, metrics, monthlyAllotted, previewNet }) => {
                       const emp = record.employees
                       const canEditAdjustments =
@@ -741,13 +747,13 @@ export default function PayrollProcessingPage() {
                           ? previewNet
                           : parseFloat(record.net_salary ?? previewNet) || previewNet
                       return (
-                        <tr key={record.id} className="hover:bg-slate-50/80">
-                          <td className="whitespace-nowrap px-2 py-2 font-mono text-slate-700">
+                        <tr key={record.id} className="border-t border-border hover:bg-white/5">
+                          <td className="whitespace-nowrap px-2 py-2 font-mono text-muted">
                             {emp?.employee_id || '—'}
                           </td>
-                          <td className="whitespace-nowrap px-2 py-2 text-slate-900">{emp?.name || '—'}</td>
+                          <td className="whitespace-nowrap px-2 py-2 text-foreground">{emp?.name || '—'}</td>
                           <td className="px-2 py-2">{formatGenderShort(emp?.gender)}</td>
-                          <td className="whitespace-nowrap px-2 py-2 font-mono text-slate-700">
+                          <td className="whitespace-nowrap px-2 py-2 font-mono text-muted">
                             {emp?.cnic_number || '—'}
                           </td>
                           <td className="px-2 py-2">{formatAmount(monthlyAllotted)}</td>
@@ -782,7 +788,7 @@ export default function PayrollProcessingPage() {
                               }))
                                 }}
                                 onBlur={() => handlePersistRowAdjustments(record.id)}
-                                className="w-20 rounded border border-slate-300 px-1 py-0.5"
+                                className="w-20 rounded border border-border bg-sidebar px-1 py-0.5 text-foreground"
                               />
                             ) : (
                               formatAmount(metrics.arrears)
@@ -805,7 +811,7 @@ export default function PayrollProcessingPage() {
                               }))
                                 }}
                                 onBlur={() => handlePersistRowAdjustments(record.id)}
-                                className="w-20 rounded border border-slate-300 px-1 py-0.5"
+                                className="w-20 rounded border border-border bg-sidebar px-1 py-0.5 text-foreground"
                               />
                             ) : (
                               formatAmount(metrics.deduction)

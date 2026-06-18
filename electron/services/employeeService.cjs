@@ -363,4 +363,5 @@ module.exports = {
   saveEmployeePhoto,
   mapEmployeeRow,
   buildEmployeePayload,
+  persistSalary,
 }

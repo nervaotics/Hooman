@@ -219,7 +219,6 @@ async function fetchRosterSummary(knex, dateStr) {
   return {
     present,
     absent,
-    onLeave: 0,
     halfDay: 0,
     sundayOff,
     total,

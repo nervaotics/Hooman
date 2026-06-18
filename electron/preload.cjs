@@ -9,7 +9,7 @@ function withAuth(payload = {}) {
 
 contextBridge.exposeInMainWorld('electron', {
   /** Bump when preload API surface changes (helps detect stale Electron sessions). */
-  apiVersion: 5,
+  apiVersion: 6,
 
   customTitleBar: process.platform === 'win32',
   titleBarHeight: 36,
@@ -79,15 +79,6 @@ contextBridge.exposeInMainWorld('electron', {
 
   getDashboardStats: () => ipcRenderer.invoke('dashboard:stats', withAuth({})),
 
-  getLeaveRequests: (filters) =>
-    ipcRenderer.invoke('leaves:getAll', withAuth(filters || {})),
-  applyLeave: (data) => ipcRenderer.invoke('leaves:apply', withAuth(data || {})),
-  approveLeave: (id) => ipcRenderer.invoke('leaves:approve', withAuth({ id })),
-  rejectLeave: (id, reason) =>
-    ipcRenderer.invoke('leaves:reject', withAuth({ id, reason })),
-  getLeaveBalances: (employeeId) =>
-    ipcRenderer.invoke('leaves:balances', withAuth({ employeeId })),
-
   getPayrollPeriods: () => ipcRenderer.invoke('payroll:periods', withAuth({})),
   getPayrollPeriod: (id) => ipcRenderer.invoke('payroll:period', withAuth({ id })),
   createPayrollPeriod: (data) =>
@@ -111,6 +102,30 @@ contextBridge.exposeInMainWorld('electron', {
   getPayrollPeriodAttendance: (periodId, employeeIds) =>
     ipcRenderer.invoke('payroll:periodAttendance', withAuth({ periodId, employeeIds })),
   getPayrollHistory: () => ipcRenderer.invoke('payroll:history', withAuth({})),
+
+  getAccountingMeta: () => ipcRenderer.invoke('accounting:meta', withAuth({})),
+  getAccountingAccounts: (filters) =>
+    ipcRenderer.invoke('accounting:accounts', withAuth(filters || {})),
+  getAccountingAccount: (id) =>
+    ipcRenderer.invoke('accounting:account', withAuth({ id })),
+  createAccountingAccount: (data) =>
+    ipcRenderer.invoke('accounting:createAccount', withAuth(data || {})),
+  updateAccountingAccount: (id, data) =>
+    ipcRenderer.invoke('accounting:updateAccount', withAuth({ id, ...(data || {}) })),
+  getAccountingVouchers: (filters) =>
+    ipcRenderer.invoke('accounting:vouchers', withAuth(filters || {})),
+  getAccountingVoucher: (id) =>
+    ipcRenderer.invoke('accounting:voucher', withAuth({ id })),
+  createAccountingVoucher: (data) =>
+    ipcRenderer.invoke('accounting:createVoucher', withAuth(data || {})),
+  voidAccountingVoucher: (id) =>
+    ipcRenderer.invoke('accounting:voidVoucher', withAuth({ id })),
+  getAccountingLedger: (filters) =>
+    ipcRenderer.invoke('accounting:ledger', withAuth(filters || {})),
+  getTrialBalance: (asOfDate) =>
+    ipcRenderer.invoke('accounting:trialBalance', withAuth({ asOfDate })),
+  getBalanceSheet: (asOfDate) =>
+    ipcRenderer.invoke('accounting:balanceSheet', withAuth({ asOfDate })),
 
   getJobs: () => ipcRenderer.invoke('recruitment:getJobs', withAuth({})),
   createJob: (data) =>

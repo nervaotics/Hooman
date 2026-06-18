@@ -9,7 +9,7 @@ import {
 } from '@/lib/permissions.js'
 import PasswordInput from '@/components/PasswordInput.jsx'
 
-const MODULES = ['employee_data', 'payroll_processing']
+const MODULES = ['employee_data', 'payroll_processing', 'accounting']
 
 function PermissionMatrix({ value, onChange, disabled }) {
   return (

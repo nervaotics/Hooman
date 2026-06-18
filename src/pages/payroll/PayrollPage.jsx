@@ -19,17 +19,17 @@ import { formatPkr, getMonthName } from '@/lib/payrollWorkCycle.js'
 function statusClass(status) {
   switch (status) {
     case 'Draft':
-      return 'bg-slate-100 text-slate-700'
+      return 'bg-slate-500/20 text-slate-300'
     case 'Processing':
-      return 'bg-amber-100 text-amber-800'
+      return 'bg-amber-500/20 text-amber-300'
     case 'Approved':
-      return 'bg-emerald-100 text-emerald-800'
+      return 'bg-emerald-500/20 text-emerald-300'
     case 'Paid':
-      return 'bg-blue-100 text-blue-800'
+      return 'bg-blue-500/20 text-blue-300'
     case 'Locked':
-      return 'bg-violet-100 text-violet-800'
+      return 'bg-violet-500/20 text-violet-300'
     default:
-      return 'bg-slate-100 text-slate-600'
+      return 'bg-slate-500/20 text-muted'
   }
 }
 
@@ -118,13 +118,13 @@ export default function PayrollPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Payroll Management</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage payroll periods and salary processing</p>
+          <h1 className="text-2xl font-semibold text-foreground">Payroll Management</h1>
+          <p className="mt-1 text-sm text-muted">Manage payroll periods and salary processing</p>
         </div>
         {canProcess && (
           <Link
             to="/payroll/processing"
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
           >
             <Plus className="h-4 w-4" />
             Create New Period
@@ -134,34 +134,34 @@ export default function PayrollPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {[
-          { label: 'Total Periods', value: stats.total, icon: Calendar, tone: 'text-slate-600' },
-          { label: 'Draft', value: stats.draft, icon: Clock, tone: 'text-slate-500' },
-          { label: 'Processing', value: stats.processing, icon: Clock, tone: 'text-amber-600' },
-          { label: 'Approved', value: stats.approved, icon: CheckCircle2, tone: 'text-emerald-600' },
-          { label: 'Paid', value: stats.paid, icon: DollarSign, tone: 'text-blue-600' },
+          { label: 'Total Periods', value: stats.total, icon: Calendar, tone: 'text-muted' },
+          { label: 'Draft', value: stats.draft, icon: Clock, tone: 'text-muted' },
+          { label: 'Processing', value: stats.processing, icon: Clock, tone: 'text-amber-400' },
+          { label: 'Approved', value: stats.approved, icon: CheckCircle2, tone: 'text-emerald-400' },
+          { label: 'Paid', value: stats.paid, icon: DollarSign, tone: 'text-blue-400' },
         ].map(({ label, value, icon: Icon, tone }) => (
-          <div key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div key={label} className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center gap-3">
               <Icon className={`h-5 w-5 ${tone}`} />
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-                <p className="text-2xl font-semibold text-slate-900">{value}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+                <p className="text-2xl font-semibold text-foreground">{value}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         {loading ? (
-          <div className="p-10 text-center text-sm text-slate-500">Loading payroll periods…</div>
+          <div className="p-10 text-center text-sm text-muted">Loading payroll periods…</div>
         ) : periods.length === 0 ? (
           <div className="flex flex-col items-center gap-4 p-10 text-center">
-            <p className="text-sm text-slate-500">No payroll periods found. Create a new period to get started.</p>
+            <p className="text-sm text-muted">No payroll periods found. Create a new period to get started.</p>
             {canProcess && (
               <Link
                 to="/payroll/processing"
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
               >
                 <Plus className="h-4 w-4" />
                 Create First Period
@@ -170,37 +170,39 @@ export default function PayrollPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-sidebar text-xs uppercase text-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Period</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Month/Year</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Payroll Date</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Employees</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Total Amount</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
-                  <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>
+                  <th className="px-4 py-3">Period</th>
+                  <th className="px-4 py-3">Month/Year</th>
+                  <th className="px-4 py-3">Payroll Date</th>
+                  <th className="px-4 py-3">Employees</th>
+                  <th className="px-4 py-3">Total Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {periods.map((period) => (
-                  <tr key={period.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-3 font-medium text-slate-900">{period.period_name}</td>
-                    <td className="px-4 py-3 text-slate-700">
+                  <tr key={period.id} className="border-t border-border hover:bg-white/5">
+                    <td className="px-4 py-3 font-medium text-foreground">{period.period_name}</td>
+                    <td className="px-4 py-3 text-muted">
                       {getMonthName(period.period_month)} {period.period_year}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-muted">
                       {period.payroll_date
                         ? new Date(`${period.payroll_date}T12:00:00`).toLocaleDateString()
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-muted">
                       <span className="inline-flex items-center gap-1.5">
-                        <Users className="h-4 w-4 text-slate-400" />
+                        <Users className="h-4 w-4 text-muted" />
                         {period.payroll_records?.length || 0}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{formatPkr(periodTotal(period))}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {formatPkr(periodTotal(period))}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass(period.status)}`}
@@ -213,7 +215,7 @@ export default function PayrollPage() {
                         <button
                           type="button"
                           onClick={() => navigate(`/payroll/processing?period=${period.id}`)}
-                          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-indigo-600"
+                          className="rounded-lg p-2 text-muted hover:bg-white/5 hover:text-accent"
                           title="Open period"
                         >
                           <Pencil className="h-4 w-4" />
@@ -223,7 +225,7 @@ export default function PayrollPage() {
                             type="button"
                             onClick={() => handleDelete(period)}
                             disabled={deletingId === period.id}
-                            className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            className="rounded-lg p-2 text-muted hover:bg-red-500/10 hover:text-danger disabled:opacity-50"
                             title="Delete period"
                           >
                             <Trash2 className="h-4 w-4" />

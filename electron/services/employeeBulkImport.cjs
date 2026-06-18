@@ -1,6 +1,6 @@
 const { formatCNIC, isValidCNIC, formatPhone, isValidPhone } = require('../lib/validators.cjs')
 const { getNextEmployeeCode } = require('../lib/employeeCodes.cjs')
-const { buildEmployeePayload, checkCnicDuplicate } = require('./employeeService.cjs')
+const { buildEmployeePayload, checkCnicDuplicate, persistSalary } = require('./employeeService.cjs')
 const { toUserMessage } = require('../lib/userErrors.cjs')
 
 function empty(v) {
@@ -87,6 +87,10 @@ const HEADER_ALIASES = {
   dept: 'department',
   employee_type: 'employee_type',
   type: 'employee_type',
+  salary: 'salary',
+  gross_salary: 'salary',
+  monthly_salary: 'salary',
+  basic_salary: 'salary',
 }
 
 function normalizeRow(raw) {
@@ -166,10 +170,26 @@ function validateImportRow(row, lineNo) {
   return { cnic, phone, errors }
 }
 
+function parseSalary(value) {
+  if (empty(value)) return null
+  const n = Number(String(value).replace(/,/g, '').trim())
+  if (!Number.isFinite(n) || n <= 0) return Number.NaN
+  return Math.round(n * 100) / 100
+}
+
+function validateSalary(row, lineNo) {
+  if (empty(row.salary)) return { salary: null, errors: [] }
+  const salary = parseSalary(row.salary)
+  if (Number.isNaN(salary)) {
+    return { salary: null, errors: [`Row ${lineNo}: salary must be a positive number`] }
+  }
+  return { salary, errors: [] }
+}
+
 const CSV_TEMPLATE = [
-  'punch_code,name,cnic,phone,area,department',
-  '101,Ali Ahmed,61101-089160-3,0300-1234567,Block-22,Production',
-  '102,Sara Khan,12345-123456-1,0334-7359797,Block-22,HR',
+  'punch_code,name,cnic,phone,area,department,salary',
+  '101,Ali Ahmed,61101-089160-3,0300-1234567,Block-22,Production,45000',
+  '102,Sara Khan,12345-123456-1,0334-7359797,Block-22,HR,55000',
 ].join('\n')
 
 /**
@@ -203,9 +223,11 @@ async function bulkImportFromCsv(knex, csvText) {
     }
 
     const { cnic, phone, errors: validationErrors } = validateImportRow(row, lineNo)
-    if (validationErrors.length) {
+    const { salary, errors: salaryErrors } = validateSalary(row, lineNo)
+    const allValidationErrors = [...validationErrors, ...salaryErrors]
+    if (allValidationErrors.length) {
       results.failed += 1
-      results.errors.push(...validationErrors)
+      results.errors.push(...allValidationErrors)
       continue
     }
 
@@ -275,12 +297,25 @@ async function bulkImportFromCsv(knex, csvText) {
         })
       }
 
+      if (salary != null) {
+        // eslint-disable-next-line no-await-in-loop
+        await persistSalary(knex, id, {
+          effective_from: form.joining_date,
+          basic_salary: salary,
+          house_rent_allowance: 0,
+          transport_allowance: 0,
+          medical_allowance: 0,
+          special_allowance: 0,
+        })
+      }
+
       results.imported += 1
       results.rows.push({
         line: lineNo,
         employee_id: employeeCode,
         punch_code: punchCode,
         name: row.name,
+        salary: salary ?? null,
       })
     } catch (e) {
       results.failed += 1

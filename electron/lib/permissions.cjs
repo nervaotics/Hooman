@@ -1,4 +1,4 @@
-const PERMISSION_MODULES = ['employee_data', 'payroll_processing']
+const PERMISSION_MODULES = ['employee_data', 'payroll_processing', 'accounting']
 
 const ACCESS_LEVELS = ['none', 'read', 'write']
 
@@ -6,6 +6,7 @@ function normalizePermissions(raw) {
   const base = {
     employee_data: 'none',
     payroll_processing: 'none',
+    accounting: 'none',
   }
   if (!raw) return base
 
@@ -61,10 +62,10 @@ function validatePermissionsInput(input) {
 
 function permissionsForClient(user) {
   if (isSuperAdmin(user)) {
-    return { employee_data: 'write', payroll_processing: 'write' }
+    return { employee_data: 'write', payroll_processing: 'write', accounting: 'write' }
   }
   if (isLegacyFullAccess(user)) {
-    return { employee_data: 'write', payroll_processing: 'write' }
+    return { employee_data: 'write', payroll_processing: 'write', accounting: 'write' }
   }
   return normalizePermissions(user.permissions)
 }

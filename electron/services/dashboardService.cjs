@@ -15,7 +15,6 @@ async function fetchDashboardStats(knex, store) {
 
   const [
     employeeCountRow,
-    pendingLeavesRow,
     pendingPayrollRow,
     attendanceSummary,
     attendanceTrend,
@@ -23,10 +22,6 @@ async function fetchDashboardStats(knex, store) {
     knex('employees')
       .where('is_deleted', false)
       .where('status', 'active')
-      .count('* as cnt')
-      .first(),
-    knex('leave_requests')
-      .where('status', 'pending')
       .count('* as cnt')
       .first(),
     knex('payroll_runs')
@@ -59,7 +54,6 @@ async function fetchDashboardStats(knex, store) {
     stats: {
       totalEmployees: Number(employeeCountRow?.cnt ?? 0),
       presentToday: attendanceSummary.present,
-      pendingLeaves: Number(pendingLeavesRow?.cnt ?? 0),
       pendingPayroll: Number(pendingPayrollRow?.cnt ?? 0),
       devicesOnline: onlineDevices,
       devicesTotal: enabledDevices.length,

@@ -125,8 +125,8 @@ app.whenReady().then(async () => {
   require('./ipc/areas.ipc.cjs')(ipcMain, store)
   require('./ipc/attendance.ipc.cjs')(ipcMain, store)
   require('./ipc/dashboard.ipc.cjs')(ipcMain, store)
-  require('./ipc/leaves.ipc.cjs')(ipcMain, store)
   require('./ipc/payroll.ipc.cjs')(ipcMain, store)
+  require('./ipc/accounting.ipc.cjs')(ipcMain, store)
   require('./ipc/recruitment.ipc.cjs')(ipcMain, store)
 
   const updater = require('./updater.cjs')

@@ -1,6 +1,7 @@
 export const MODULE_LABELS = {
   employee_data: 'Employee data',
   payroll_processing: 'Payroll processing',
+  accounting: 'Accounting',
 }
 
 export const ACCESS_LABELS = {
@@ -29,4 +30,5 @@ export function isSuperAdmin(user) {
 export const defaultPermissions = () => ({
   employee_data: 'none',
   payroll_processing: 'none',
+  accounting: 'none',
 })
