@@ -28,3 +28,8 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Hooman
+
+publish:
+  provider: github
+  owner: nervaotics
+  repo: Hooman
