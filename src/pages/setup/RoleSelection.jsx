@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { formatUserError } from '@/lib/userMessage.js'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
@@ -22,7 +23,7 @@ export default function RoleSelection() {
       if (boot.needsAdminSetup) navigate('/setup/admin', { replace: true })
       else navigate('/login', { replace: true })
     } catch (e) {
-      setError(e?.message || 'Server setup failed')
+      setError(formatUserError(e, 'Server setup failed.'))
     } finally {
       setBusy(false)
     }

@@ -21,13 +21,13 @@ module.exports = function registerAuthIpc(ipcMain, store) {
     await runMigrations(store)
     const knex = getOrCreateKnex(store)
     const { username, password } = credentials || {}
-    if (!username || !password) throw new Error('Username and password required')
+    if (!username || !password) throw new Error('Please enter your username and password.')
 
     const user = await knex('users').where({ username, is_active: true }).first()
-    if (!user) throw new Error('Invalid credentials')
+    if (!user) throw new Error('Wrong username or password.')
 
     const ok = await bcrypt.compare(password, user.password_hash)
-    if (!ok) throw new Error('Invalid credentials')
+    if (!ok) throw new Error('Wrong username or password.')
 
     await knex('users').where({ id: user.id }).update({ last_login: knex.fn.now() })
 

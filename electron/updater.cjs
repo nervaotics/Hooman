@@ -26,36 +26,25 @@ function saveSettings(store, patch = {}) {
   return next
 }
 
-function sendStatus(win, payload) {
-  win?.webContents?.send('update-status', payload)
+/** Missing/private release feeds and “no update yet” are normal — stay quiet in the UI. */
+function isBenignUpdateCheckError(err) {
+  const msg = String(err?.message || err || '').toLowerCase()
+  if (!msg) return true
+  if (/404/.test(msg) && /github|releases\.atom|latest\.yml/i.test(msg)) return true
+  if (/authentication token/i.test(msg) && /404/.test(msg)) return true
+  if (/cannot find channel|no published versions|unable to find latest version/i.test(msg)) {
+    return true
+  }
+  return false
 }
 
-/** GitHub returns 404 for missing/private release feeds — not always a bad token. */
-function humanizeUpdateError(err) {
-  const msg = String(err?.message || err || '')
-  const isGithubFeed =
-    /releases\.atom|github\.com/i.test(msg) || /nervaotics\/Hooman/i.test(msg)
-
-  if (isGithubFeed && /404/.test(msg)) {
-    return (
-      'No public GitHub release found for nervaotics/Hooman yet. ' +
-      'Push a version tag (e.g. v0.1.2) so GitHub Actions can publish the installer. ' +
-      'If the repository is private, publish releases publicly or disable auto-check in Settings.'
-    )
+function logUpdateCheckIssue(err) {
+  const firstLine = String(err?.message || err || 'unknown error').split('\n')[0]
+  if (isBenignUpdateCheckError(err)) {
+    console.log('[Hooman] update check: no release feed or already current')
+    return
   }
-
-  if (isGithubFeed && /401|403/.test(msg)) {
-    return (
-      'GitHub blocked access to the release feed. ' +
-      'Auto-update needs a public repository with published releases.'
-    )
-  }
-
-  if (/authentication token/i.test(msg) && /404/.test(msg)) {
-    return humanizeUpdateError({ message: '404 github.com/nervaotics/Hooman/releases.atom' })
-  }
-
-  return msg || 'Update check failed'
+  console.warn('[Hooman] update check failed:', firstLine)
 }
 
 function applyUpdaterRuntimeConfig(store) {
@@ -76,9 +65,7 @@ function schedulePeriodicChecks(win, store) {
   const cfg = getSettings(store)
   if (!cfg.autoCheck || !app.isPackaged) return
   checkTimer = setInterval(() => {
-    checkForUpdates(win, store).catch((err) => {
-      console.warn('[Hooman] periodic update check failed:', err.message)
-    })
+    checkForUpdates(win, store).catch(logUpdateCheckIssue)
   }, cfg.checkIntervalMinutes * 60 * 1000)
 }
 
@@ -88,21 +75,10 @@ async function checkForUpdates(win, store) {
   try {
     const result = await autoUpdater.checkForUpdates()
     const hasUpdate = Boolean(result?.updateInfo?.version)
-    if (hasUpdate) {
-      sendStatus(win, {
-        type: 'available',
-        version: result.updateInfo.version,
-        message: `Version ${result.updateInfo.version} is available.`,
-      })
-    } else {
-      sendStatus(win, { type: 'none', message: 'Already on latest version.' })
-    }
     return { ok: true, hasUpdate, version: result?.updateInfo?.version || null }
   } catch (err) {
-    const message = humanizeUpdateError(err)
-    sendStatus(win, { type: 'error', message })
-    console.warn('[Hooman] update check failed:', message)
-    return { ok: false, error: message }
+    logUpdateCheckIssue(err)
+    return { ok: true, hasUpdate: false, silent: true }
   }
 }
 
@@ -113,38 +89,16 @@ async function checkForUpdates(win, store) {
 function init(win, store) {
   try {
     applyUpdaterRuntimeConfig(store)
-    autoUpdater.on('checking-for-update', () => {
-      sendStatus(win, { type: 'checking', message: 'Checking for updates…' })
-    })
-    autoUpdater.on('update-available', (info) => {
-      sendStatus(win, {
-        type: 'available',
-        version: info?.version || null,
-        message: 'Update found. Downloading in background.',
-      })
-    })
-    autoUpdater.on('update-not-available', () => {
-      sendStatus(win, { type: 'none', message: 'Already on latest version.' })
-    })
     autoUpdater.on('error', (err) => {
-      const message = humanizeUpdateError(err)
-      sendStatus(win, { type: 'error', message })
-      console.warn('[Hooman] updater error:', message)
+      logUpdateCheckIssue(err)
     })
-    autoUpdater.on('update-downloaded', (info) => {
+    autoUpdater.on('update-downloaded', () => {
       win?.webContents?.send('update-ready')
-      sendStatus(win, {
-        type: 'downloaded',
-        version: info?.version || null,
-        message: 'Update downloaded and ready to install.',
-      })
     })
 
     schedulePeriodicChecks(win, store)
     if (getSettings(store).autoCheck && app.isPackaged) {
-      checkForUpdates(win, store).catch((err) => {
-        console.warn('[Hooman] initial update check failed:', err.message)
-      })
+      checkForUpdates(win, store).catch(logUpdateCheckIssue)
     }
   } catch (err) {
     console.warn('[Hooman] updater init skipped:', err.message)
@@ -157,5 +111,4 @@ module.exports = {
   saveSettings,
   checkForUpdates,
   schedulePeriodicChecks,
-  humanizeUpdateError,
 }

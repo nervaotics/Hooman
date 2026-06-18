@@ -1,3 +1,4 @@
+const { toUserMessage } = require('../lib/userErrors.cjs')
 const {
   getMergedDbConfig,
   isDbConfigComplete,
@@ -55,7 +56,7 @@ module.exports = function registerBootstrapIpc(ipcMain, store) {
         hasUsers: false,
         needsAdminSetup: false,
         needsDatabaseSetup: false,
-        error: err.message,
+        error: toUserMessage(err, 'Cannot connect to the database.'),
       }
     }
 
@@ -70,7 +71,7 @@ module.exports = function registerBootstrapIpc(ipcMain, store) {
         hasUsers: false,
         needsAdminSetup: false,
         needsDatabaseSetup: false,
-        migrationError: err.message,
+        migrationError: toUserMessage(err, 'Could not update the database schema.'),
       }
     }
 

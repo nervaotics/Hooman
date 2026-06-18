@@ -29,19 +29,9 @@ export default function UpdateNotifier() {
         duration: Infinity,
       })
     })
-    const unsubStatus = window.electron?.onUpdateStatus?.((event) => {
-      if (event?.type === 'available') {
-        toast('Update available', {
-          description: event.message || 'New update found.',
-        })
-      }
-      if (event?.type === 'error') {
-        toast.error(event.message || 'Update check failed')
-      }
-    })
+
     return () => {
       unsubReady?.()
-      unsubStatus?.()
     }
   }, [])
 

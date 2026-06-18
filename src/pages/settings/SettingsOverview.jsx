@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 
 export default function SettingsOverview() {
   const [db, setDb] = useState(null)
@@ -31,7 +32,7 @@ export default function SettingsOverview() {
       if (next) setUpdates(next)
       toast.success('Updater settings saved')
     } catch (e) {
-      toast.error(e?.message || 'Could not save updater settings')
+      toastError(e, 'Could not save updater settings.')
     } finally {
       setBusy(false)
     }
@@ -41,19 +42,11 @@ export default function SettingsOverview() {
     setBusy(true)
     try {
       const result = await window.electron.checkUpdatesNow?.()
-      if (result?.error) {
-        toast.error(result.error)
-      } else if (result?.skipped === 'not-packaged') {
-        toast.message('Updates apply to the installed app only (not dev mode).')
-      } else if (result?.hasUpdate) {
+      if (result?.hasUpdate) {
         toast.success(`Update available: v${result.version}`)
-      } else if (result?.ok) {
-        toast.success('You are on the latest version.')
-      } else {
-        toast.success('Update check finished.')
       }
-    } catch (e) {
-      toast.error(e?.message || 'Update check failed')
+    } catch {
+      /* silent — background checks do not surface feed errors */
     } finally {
       setBusy(false)
     }

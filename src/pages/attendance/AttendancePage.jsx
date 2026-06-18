@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Calendar, RefreshCw, Search } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { canWrite } from '@/lib/permissions.js'
 
@@ -35,7 +36,7 @@ export default function AttendancePage() {
       setRows(result.rows || [])
       setTimezone(result.timezone || 'Asia/Karachi')
     } catch (e) {
-      toast.error(e?.message || 'Could not load attendance')
+      toastError(e, 'Could not load attendance.')
       setRows([])
     } finally {
       setLoading(false)
@@ -70,7 +71,7 @@ export default function AttendancePage() {
       if (fail) toast.warning(`${fail} device${fail === 1 ? '' : 's'} failed to sync`)
       await load()
     } catch (e) {
-      toast.error(e?.message || 'Sync failed')
+      toastError(e, 'Attendance sync failed.')
     } finally {
       setSyncing(false)
     }

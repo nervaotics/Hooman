@@ -109,6 +109,9 @@ app.whenReady().then(async () => {
 
   await tryMigrateOnLaunch()
 
+  const { wrapIpcMain } = require('./lib/ipcWrap.cjs')
+  wrapIpcMain(ipcMain)
+
   const win = createWindow()
   watchPreloadInDev()
 

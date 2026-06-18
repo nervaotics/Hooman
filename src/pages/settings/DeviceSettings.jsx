@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toastError } from '@/lib/notify.js'
 import { toast } from 'sonner'
 import { KNOWN_POOLS } from '@/lib/constants.js'
 
@@ -27,7 +28,7 @@ export default function DeviceSettings() {
       await window.electron.saveDevices(devices)
       toast.success('Devices saved')
     } catch (e) {
-      toast.error(e?.message || 'Save failed')
+      toastError(e, 'Could not save device settings.')
     } finally {
       setBusy(false)
     }

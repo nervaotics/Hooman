@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Shield, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import {
   ACCESS_LABELS,
   MODULE_LABELS,
@@ -50,7 +51,7 @@ export default function UserManagement() {
       const list = await window.electron.listUsers()
       setUsers(list)
     } catch (e) {
-      toast.error(e?.message || 'Could not load users')
+      toastError(e, 'Could not load users.')
       setUsers([])
     } finally {
       setLoading(false)
@@ -66,7 +67,7 @@ export default function UserManagement() {
         if (!cancelled) setUsers(list)
       } catch (e) {
         if (!cancelled) {
-          toast.error(e?.message || 'Could not load users')
+          toastError(e, 'Could not load users.')
           setUsers([])
         }
       } finally {
@@ -114,7 +115,7 @@ export default function UserManagement() {
       resetForm()
       load()
     } catch (err) {
-      toast.error(err?.message || 'Save failed')
+      toastError(err, 'Could not save user.')
     } finally {
       setBusy(false)
     }
@@ -127,7 +128,7 @@ export default function UserManagement() {
       toast.success('User deactivated')
       load()
     } catch (err) {
-      toast.error(err?.message || 'Could not deactivate user')
+      toastError(err, 'Could not deactivate this user.')
     }
   }
 

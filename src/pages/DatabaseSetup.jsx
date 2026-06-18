@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { formatUserError } from '@/lib/userMessage.js'
 import { isElectron } from '@/lib/electron.js'
 import PasswordInput from '@/components/PasswordInput.jsx'
 
@@ -59,7 +60,7 @@ export default function DatabaseSetup() {
       await window.electron.testDbConnection(form)
       setMessage('Connection OK')
     } catch (e) {
-      setMessage(e?.message || 'Connection failed')
+      setMessage(formatUserError(e, 'Could not connect to the database.'))
     } finally {
       setBusy(false)
     }
@@ -75,7 +76,7 @@ export default function DatabaseSetup() {
       if (boot.needsAdminSetup) navigate('/setup/admin', { replace: true })
       else navigate('/login', { replace: true })
     } catch (e) {
-      setMessage(e?.message || 'Save failed')
+      setMessage(formatUserError(e, 'Could not save database settings.'))
     } finally {
       setBusy(false)
     }

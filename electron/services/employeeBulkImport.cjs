@@ -1,6 +1,7 @@
 const { formatCNIC, isValidCNIC, formatPhone, isValidPhone } = require('../lib/validators.cjs')
 const { getNextEmployeeCode } = require('../lib/employeeCodes.cjs')
 const { buildEmployeePayload, checkCnicDuplicate } = require('./employeeService.cjs')
+const { toUserMessage } = require('../lib/userErrors.cjs')
 
 function empty(v) {
   return v === undefined || v === null || String(v).trim() === ''
@@ -283,7 +284,7 @@ async function bulkImportFromCsv(knex, csvText) {
       })
     } catch (e) {
       results.failed += 1
-      results.errors.push(`Row ${lineNo}: ${e.message}`)
+      results.errors.push(`Row ${lineNo}: ${toUserMessage(e, 'This row could not be imported.')}`)
     }
   }
 

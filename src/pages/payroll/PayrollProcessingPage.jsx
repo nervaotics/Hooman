@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { canWrite } from '@/lib/permissions.js'
 import {
@@ -100,7 +101,7 @@ export default function PayrollProcessingPage() {
         payroll_date: period.payroll_date,
       })
     } catch (e) {
-      toast.error(e?.message || 'Could not load payroll period')
+      toastError(e, 'Could not load this payroll period.')
     } finally {
       setLoading(false)
     }
@@ -239,7 +240,7 @@ export default function PayrollProcessingPage() {
       toast.success('Payroll period created')
       navigate(`/payroll/processing?period=${period.id}`)
     } catch (e) {
-      toast.error(e?.message || 'Could not create payroll period')
+      toastError(e, 'Could not create this payroll period.')
     } finally {
       setLoading(false)
     }
@@ -260,7 +261,7 @@ export default function PayrollProcessingPage() {
       toast.success('Period details saved')
       await loadPeriod(currentPeriod.id)
     } catch (e) {
-      toast.error(e?.message || 'Could not save period')
+      toastError(e, 'Could not save period details.')
     } finally {
       setLoading(false)
     }
@@ -287,7 +288,7 @@ export default function PayrollProcessingPage() {
       )
       await loadPeriod(currentPeriod.id)
     } catch (e) {
-      toast.error(e?.message || 'Could not process payroll')
+      toastError(e, 'Could not process payroll.')
     } finally {
       setProcessing(false)
     }
@@ -309,7 +310,7 @@ export default function PayrollProcessingPage() {
       })
       await loadPeriod(currentPeriod.id)
     } catch (e) {
-      toast.error(e?.message || 'Could not save adjustments')
+      toastError(e, 'Could not save adjustments.')
     }
   }
 
@@ -322,7 +323,7 @@ export default function PayrollProcessingPage() {
       toast.success('Payroll period approved')
       await loadPeriod(currentPeriod.id)
     } catch (e) {
-      toast.error(e?.message || 'Could not approve period')
+      toastError(e, 'Could not approve this payroll period.')
     } finally {
       setLoading(false)
     }
@@ -344,7 +345,7 @@ export default function PayrollProcessingPage() {
       toast.success('Payroll reverted to Draft')
       await loadPeriod(currentPeriod.id)
     } catch (e) {
-      toast.error(e?.message || 'Could not revert period')
+      toastError(e, 'Could not revert this payroll period.')
     } finally {
       setLoading(false)
     }
@@ -382,7 +383,7 @@ export default function PayrollProcessingPage() {
       toast.success('Payroll period deleted')
       navigate('/payroll')
     } catch (e) {
-      toast.error(e?.message || 'Could not delete payroll period')
+      toastError(e, 'Could not delete this payroll period.')
     } finally {
       setLoading(false)
     }

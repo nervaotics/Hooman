@@ -3,13 +3,13 @@ const { verifyToken } = require('./jwt.cjs')
 const { getOrCreateKnex, ensureMigrations } = require('../db/connection.cjs')
 const { canAccess, isSuperAdmin, permissionsForClient } = require('./permissions.cjs')
 
-function unauthorized(message = 'Unauthorized') {
+function unauthorized(message = 'Your session has expired. Please sign in again.') {
   const err = new Error(message)
   err.code = 'UNAUTHORIZED'
   return err
 }
 
-function forbidden(message = 'You do not have permission for this action') {
+function forbidden(message = "You don't have permission to do that.") {
   const err = new Error(message)
   err.code = 'FORBIDDEN'
   return err

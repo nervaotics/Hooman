@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { formatUserError } from '@/lib/userMessage.js'
 import { useNavigate } from 'react-router-dom'
 
 export default function ClientServerIP() {
@@ -16,7 +17,7 @@ export default function ClientServerIP() {
       await window.electron.testServerConnection({ ip })
       setMessage('Connection OK')
     } catch (e) {
-      setError(e?.message || 'Connection failed')
+      setError(formatUserError(e, 'Could not reach the server.'))
     } finally {
       setBusy(false)
     }
@@ -32,7 +33,7 @@ export default function ClientServerIP() {
       if (boot.needsAdminSetup) navigate('/setup/admin', { replace: true })
       else navigate('/login', { replace: true })
     } catch (e) {
-      setError(e?.message || 'Save failed')
+      setError(formatUserError(e, 'Could not save server settings.'))
     } finally {
       setBusy(false)
     }

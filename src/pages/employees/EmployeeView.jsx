@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import { parseMoney } from '@/lib/employeeForm.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { canWrite } from '@/lib/permissions.js'
@@ -32,7 +33,7 @@ export default function EmployeeView() {
         if (!cancelled) setDetail(data)
       } catch (e) {
         if (!cancelled) {
-          toast.error(e?.message || 'Not found')
+          toastError(e, 'That employee could not be found.')
           navigate('/employees')
         }
       } finally {
@@ -51,7 +52,7 @@ export default function EmployeeView() {
       toast.success('Employee removed')
       navigate('/employees')
     } catch (e) {
-      toast.error(e?.message || 'Delete failed')
+      toastError(e, 'Could not delete this employee.')
     }
   }
 

@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { canWrite } from '@/lib/permissions.js'
 import { formatPkr, getMonthName } from '@/lib/payrollWorkCycle.js'
@@ -53,7 +54,7 @@ export default function PayrollPage() {
       const data = await window.electron.getPayrollPeriods()
       setPeriods(data || [])
     } catch (e) {
-      toast.error(e?.message || 'Could not load payroll periods')
+      toastError(e, 'Could not load payroll periods.')
       setPeriods([])
     } finally {
       setLoading(false)
@@ -107,7 +108,7 @@ export default function PayrollPage() {
       toast.success('Payroll period deleted')
       await load()
     } catch (e) {
-      toast.error(e?.message || 'Could not delete payroll period')
+      toastError(e, 'Could not delete this payroll period.')
     } finally {
       setDeletingId(null)
     }

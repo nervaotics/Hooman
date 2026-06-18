@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Download, Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 
 export default function EmployeeBulkImport() {
   const inputRef = useRef(null)
@@ -18,7 +19,7 @@ export default function EmployeeBulkImport() {
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
-      toast.error(e?.message || 'Could not download template')
+      toastError(e, 'Could not download the import template.')
     }
   }
 
@@ -39,7 +40,7 @@ export default function EmployeeBulkImport() {
         toast.warning(`${res.failed} row${res.failed === 1 ? '' : 's'} skipped`)
       }
     } catch (e) {
-      toast.error(e?.message || 'Import failed')
+      toastError(e, 'Import failed.')
     } finally {
       setBusy(false)
       if (inputRef.current) inputRef.current.value = ''

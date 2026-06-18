@@ -12,6 +12,8 @@ export function requireElectron() {
   return window.electron
 }
 
+import { formatUserError } from '@/lib/userMessage.js'
+
 /**
  * Call a preload API method with a clear error if the desktop shell is stale.
  * @param {string} method
@@ -22,8 +24,10 @@ export function callElectron(method, ...args) {
   const fn = api[method]
   if (typeof fn !== 'function') {
     throw new Error(
-      `Desktop API "${method}" is missing. Fully quit the Hooman/Electron window (not just refresh), stop npm run dev, then start it again.`,
+      'Please fully quit Hooman and start it again. The desktop app did not load correctly.',
     )
   }
-  return fn(...args)
+  return fn(...args).catch((err) => {
+    throw new Error(formatUserError(err))
+  })
 }

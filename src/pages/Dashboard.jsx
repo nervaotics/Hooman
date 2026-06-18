@@ -10,9 +10,10 @@ import {
   Users,
   Wallet,
 } from 'lucide-react'
-import { useAuthStore } from '@/store/authStore.js'
+import { formatUserError } from '@/lib/userMessage.js'
 import { canRead, isSuperAdmin } from '@/lib/permissions.js'
 import { callElectron } from '@/lib/electron.js'
+import { useAuthStore } from '@/store/authStore.js'
 
 function greetingForHour(hour) {
   if (hour < 5) return 'Good evening'
@@ -129,7 +130,7 @@ export default function Dashboard() {
         setError(null)
       } catch (e) {
         if (cancelled) return
-        setError(e?.message || 'Could not load dashboard')
+        setError(formatUserError(e, 'Could not load the dashboard.'))
         setStats(emptyStats)
         setAttendanceSummary(emptySummary)
         setAttendanceTrend([])
@@ -204,7 +205,7 @@ export default function Dashboard() {
                 setAttendanceTrend(data.attendanceTrend || [])
                 setError(null)
               })
-              .catch((e) => setError(e?.message || 'Could not load dashboard'))
+              .catch((e) => setError(formatUserError(e, 'Could not load the dashboard.')))
               .finally(() => setRefreshing(false))
           }}
           disabled={refreshing}

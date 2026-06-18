@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Building2, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { isSuperAdmin } from '@/lib/permissions.js'
 
@@ -51,7 +52,7 @@ function EntityPanel({
       }
       reset()
     } catch (err) {
-      toast.error(err?.message || 'Save failed')
+      toastError(err, 'Could not save.')
     } finally {
       setBusy(false)
     }
@@ -64,7 +65,7 @@ function EntityPanel({
       toast.success(`${title} removed`)
       if (editing?.id === row.id) reset()
     } catch (err) {
-      toast.error(err?.message || 'Delete failed')
+      toastError(err, 'Could not delete.')
     }
   }
 
@@ -188,7 +189,7 @@ export default function OrganizationPage() {
       setDepartments(depts)
       setAreas(sites)
     } catch (e) {
-      toast.error(e?.message || 'Could not load directory')
+      toastError(e, 'Could not load departments and sites.')
       setDepartments([])
       setAreas([])
     } finally {
@@ -211,7 +212,7 @@ export default function OrganizationPage() {
         setAreas(sites)
       } catch (e) {
         if (cancelled) return
-        toast.error(e?.message || 'Could not load directory')
+        toastError(e, 'Could not load departments and sites.')
         setDepartments([])
         setAreas([])
       } finally {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { formatUserError } from '@/lib/userMessage.js'
 import PasswordInput from '@/components/PasswordInput.jsx'
 
 export default function FirstAdminSetup() {
@@ -29,7 +30,7 @@ export default function FirstAdminSetup() {
       await window.electron.createFirstAdmin({ username, password })
       navigate('/login', { replace: true })
     } catch (err) {
-      setError(err?.message || 'Could not create administrator')
+      setError(formatUserError(err, 'Could not create the administrator account.'))
     } finally {
       setBusy(false)
     }

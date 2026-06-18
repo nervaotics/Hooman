@@ -11,6 +11,7 @@ import {
   User,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { canWrite } from '@/lib/permissions.js'
 
@@ -47,7 +48,7 @@ export default function EmployeeList() {
       setDepartments(depts)
       setAreas(siteList)
     } catch (e) {
-      toast.error(e?.message || 'Could not load employees')
+      toastError(e, 'Could not load employees.')
       setEmployees([])
     } finally {
       setLoading(false)
@@ -79,7 +80,7 @@ export default function EmployeeList() {
       toast.success('Employee removed')
       load()
     } catch (e) {
-      toast.error(e?.message || 'Delete failed')
+      toastError(e, 'Could not delete this employee.')
     }
   }
 

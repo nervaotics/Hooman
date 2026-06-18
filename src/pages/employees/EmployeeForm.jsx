@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { toastError } from '@/lib/notify.js'
 import FormSection, { Field } from '@/components/employees/FormSection.jsx'
 import { inputClass, selectClass } from '@/components/employees/formStyles.js'
 import {
@@ -179,7 +180,7 @@ export default function EmployeeForm() {
 
         if (emp.photo_url) setPhotoPreview(emp.photo_url)
       } catch (e) {
-        toast.error(e?.message || 'Could not load employee')
+        toastError(e, 'Could not load this employee.')
         navigate('/employees')
       } finally {
         setLoading(false)
@@ -252,7 +253,7 @@ export default function EmployeeForm() {
         setFormData((prev) => ({ ...prev, photo_url: res.photo_url }))
         toast.success('Photo saved')
       } catch (err) {
-        toast.error(err?.message || 'Photo upload failed')
+        toastError(err, 'Photo upload failed.')
       } finally {
         setUploadingPhoto(false)
       }
@@ -315,7 +316,7 @@ export default function EmployeeForm() {
         navigate(`/employees/${res.id}`)
       }
     } catch (err) {
-      toast.error(err?.message || 'Save failed')
+      toastError(err, 'Could not save employee.')
     } finally {
       setLoading(false)
     }

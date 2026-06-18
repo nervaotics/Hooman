@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { formatUserError } from '@/lib/userMessage.js'
 import { useAuthStore } from '@/store/authStore.js'
 import PasswordInput from '@/components/PasswordInput.jsx'
 
@@ -50,7 +51,7 @@ export default function Login() {
           : from
       navigate(dest, { replace: true })
     } catch (err) {
-      setError(err?.message || 'Sign in failed')
+      setError(formatUserError(err, 'Could not sign in. Check your username and password.'))
     } finally {
       setBusy(false)
     }
