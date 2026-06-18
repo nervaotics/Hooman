@@ -1,9 +1,33 @@
 const { buildPayrollUpsertPayload } = require('../lib/payrollPayloadBuilder.cjs')
 const { fetchAttendanceForPeriod } = require('./dailyAttendanceRollup.cjs')
+const { getPayrollPeriod21stTo20th } = require('../lib/payrollWorkCycle.cjs')
+
+function normalizeDateKey(value) {
+  if (value == null || value === '') return ''
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return ''
+    return value.toISOString().slice(0, 10)
+  }
+  const raw = String(value).trim()
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
+  const parsed = new Date(raw)
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10)
+  return ''
+}
 
 function dateOnly(value) {
-  if (!value) return ''
-  return String(value).split('T')[0]
+  return normalizeDateKey(value)
+}
+
+function resolvePeriodDates(period) {
+  let start = normalizeDateKey(period.start_date)
+  let end = normalizeDateKey(period.end_date)
+  if ((!start || !end) && period.period_month && period.period_year) {
+    const derived = getPayrollPeriod21stTo20th(period.period_month, period.period_year)
+    start = start || derived.start_date
+    end = end || derived.end_date
+  }
+  return { start, end }
 }
 
 async function getStatutorySettings(knex) {
@@ -53,22 +77,26 @@ async function listPeriods(knex) {
     byPeriod.get(r.payroll_period_id).push(r)
   }
 
-  return periods.map((p) => ({
-    ...p,
-    start_date: dateOnly(p.start_date),
-    end_date: dateOnly(p.end_date),
-    payroll_date: dateOnly(p.payroll_date),
-    payroll_records: byPeriod.get(p.id) || [],
-  }))
+  return periods.map((p) => {
+    const { start, end } = resolvePeriodDates(p)
+    return {
+      ...p,
+      start_date: start,
+      end_date: end,
+      payroll_date: dateOnly(p.payroll_date),
+      payroll_records: byPeriod.get(p.id) || [],
+    }
+  })
 }
 
 async function getPeriod(knex, id) {
   const period = await knex('payroll_periods').where({ id }).first()
   if (!period) return null
+  const { start, end } = resolvePeriodDates(period)
   return {
     ...period,
-    start_date: dateOnly(period.start_date),
-    end_date: dateOnly(period.end_date),
+    start_date: start,
+    end_date: end,
     payroll_date: dateOnly(period.payroll_date),
   }
 }
@@ -117,13 +145,20 @@ async function listRecords(knex, periodId) {
 }
 
 async function createPeriod(knex, data, userId) {
+  const start_date = normalizeDateKey(data.start_date)
+  const end_date = normalizeDateKey(data.end_date)
+  const payroll_date = normalizeDateKey(data.payroll_date)
+  if (!start_date || !end_date || !payroll_date) {
+    throw new Error('Please fill in period name and all dates.')
+  }
+
   const [id] = await knex('payroll_periods').insert({
     period_name: String(data.period_name || '').trim(),
     period_month: Number(data.period_month),
     period_year: Number(data.period_year),
-    start_date: data.start_date,
-    end_date: data.end_date,
-    payroll_date: data.payroll_date,
+    start_date,
+    end_date,
+    payroll_date,
     status: 'Draft',
     created_by: userId || null,
     created_at: new Date(),
@@ -133,13 +168,20 @@ async function createPeriod(knex, data, userId) {
 }
 
 async function updatePeriod(knex, id, data) {
+  const start_date = normalizeDateKey(data.start_date)
+  const end_date = normalizeDateKey(data.end_date)
+  const payroll_date = normalizeDateKey(data.payroll_date)
+  if (!start_date || !end_date || !payroll_date) {
+    throw new Error('Please fill in period name and all dates.')
+  }
+
   await knex('payroll_periods').where({ id }).update({
     period_name: String(data.period_name || '').trim(),
     period_month: Number(data.period_month),
     period_year: Number(data.period_year),
-    start_date: data.start_date,
-    end_date: data.end_date,
-    payroll_date: data.payroll_date,
+    start_date,
+    end_date,
+    payroll_date,
     updated_at: new Date(),
   })
   return getPeriod(knex, id)
@@ -194,9 +236,18 @@ async function processPeriod(knex, periodId) {
   const period = await getPeriod(knex, periodId)
   if (!period) throw new Error('Payroll period not found')
 
-  const start = period.start_date
-  const end = period.end_date
-  if (!start || !end) throw new Error('Period is missing start or end date')
+  const { start, end } = resolvePeriodDates(period)
+  if (!start || !end) {
+    throw new Error('This payroll period is missing start or end dates. Edit the period and save the dates first.')
+  }
+
+  if (!period.start_date || !period.end_date) {
+    await knex('payroll_periods').where({ id: periodId }).update({
+      start_date: start,
+      end_date: end,
+      updated_at: new Date(),
+    })
+  }
 
   await knex('payroll_periods').where({ id: periodId }).update({
     status: 'Processing',

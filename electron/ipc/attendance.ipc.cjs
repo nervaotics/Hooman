@@ -28,6 +28,18 @@ module.exports = function registerAttendanceIpc(ipcMain, store) {
     return { date, timezone: attendanceService.ORG_TZ, rows }
   })
 
+  ipcMain.handle('attendance:getRange', async (_e, payload) => {
+    const auth = await authorize(store, payload, { module: 'employee_data', level: 'read' })
+    const fromDate = auth.clean.fromDate || auth.clean.date
+    const toDate = auth.clean.toDate || auth.clean.date
+    if (!fromDate || !toDate) {
+      throw new Error('Please choose a from and to date.')
+    }
+    return attendanceService.fetchPunchLog(auth.knex, fromDate, toDate, {
+      search: auth.clean.search,
+    })
+  })
+
   ipcMain.handle('attendance:sync', async (_e, payload) => {
     const auth = await authorize(store, payload, { module: 'employee_data', level: 'write' })
     const devices = store.get('zkteco_devices', DEFAULT_DEVICES)

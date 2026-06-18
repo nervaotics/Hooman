@@ -68,6 +68,8 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('attendance:getLogs', withAuth(filters || {})),
   getDailyAttendance: (filters) =>
     ipcRenderer.invoke('attendance:getDaily', withAuth(filters || {})),
+  getAttendanceRange: (filters) =>
+    ipcRenderer.invoke('attendance:getRange', withAuth(filters || {})),
   syncAttendance: (filters) =>
     ipcRenderer.invoke('attendance:sync', withAuth(filters || {})),
   overrideAttendance: (data) =>

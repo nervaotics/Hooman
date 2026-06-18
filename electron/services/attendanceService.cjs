@@ -1,4 +1,10 @@
-const { localDateKey, formatTimeLocal, dayBoundsUtc, ORG_TZ } = require('../lib/timezone.cjs')
+const {
+  localDateKey,
+  formatTimeLocal,
+  dayBoundsUtc,
+  ORG_TZ,
+} = require('../lib/timezone.cjs')
+const { punchKeyVariants, buildPunchMapFromRows, lookupEmployeeId } = require('../lib/punchMap.cjs')
 
 function calculateHours(checkIn, checkOut) {
   const start = new Date(checkIn)
@@ -14,13 +20,7 @@ async function buildPunchMap(knex) {
   const rows = await knex('employees')
     .select('id', 'punch_code', 'employee_code')
     .where('is_deleted', false)
-
-  const map = new Map()
-  for (const row of rows) {
-    if (row.punch_code) map.set(String(row.punch_code).trim(), row.id)
-    if (row.employee_code) map.set(String(row.employee_code).trim(), row.id)
-  }
-  return map
+  return buildPunchMapFromRows(rows)
 }
 
 /**
@@ -36,7 +36,7 @@ async function linkAttendanceEmployeeIds(knex) {
 
   let updated = 0
   for (const log of unlinked) {
-    const empId = punchMap.get(String(log.employee_device_id ?? '').trim())
+    const empId = lookupEmployeeId(punchMap, log.employee_device_id)
     if (!empId) continue
     // eslint-disable-next-line no-await-in-loop
     await knex('attendance_logs').where({ id: log.id }).update({
@@ -75,7 +75,7 @@ async function fetchDailyTable(knex, dateStr, filters = {}) {
   for (const log of logs) {
     let empId = log.employee_id
     if (!empId) {
-      empId = punchMap.get(String(log.employee_device_id ?? '').trim()) ?? null
+      empId = lookupEmployeeId(punchMap, log.employee_device_id)
     }
     if (!empId) continue
 
@@ -121,6 +121,71 @@ async function fetchDailyTable(knex, dateStr, filters = {}) {
   }
 
   return rows
+}
+
+/**
+ * Raw punch log for a date range (includes unlinked device IDs).
+ * @param {import('knex').Knex} knex
+ * @param {string} fromDate YYYY-MM-DD
+ * @param {string} toDate YYYY-MM-DD
+ * @param {{ search?: string }} [filters]
+ */
+async function fetchPunchLog(knex, fromDate, toDate, filters = {}) {
+  await linkAttendanceEmployeeIds(knex)
+
+  const { start } = dayBoundsUtc(fromDate)
+  const { end } = dayBoundsUtc(toDate)
+
+  const logs = await knex('attendance_logs as al')
+    .leftJoin('employees as e', 'al.employee_id', 'e.id')
+    .select(
+      'al.id',
+      'al.device_id',
+      'al.employee_device_id',
+      'al.employee_id',
+      'al.punch_time',
+      'e.employee_code',
+      'e.name',
+      'e.punch_code',
+    )
+    .whereBetween('al.punch_time', [start, end])
+    .orderBy('al.punch_time', 'desc')
+
+  const punchMap = await buildPunchMap(knex)
+  let rows = logs.map((log) => {
+    const deviceId = String(log.employee_device_id ?? '').trim()
+    let linkedId = log.employee_id || lookupEmployeeId(punchMap, deviceId)
+
+    return {
+      id: log.id,
+      punch_time: formatTimeLocal(log.punch_time),
+      punch_date: localDateKey(log.punch_time),
+      device_user_id: deviceId || '—',
+      employee_id: log.employee_code || '—',
+      employee_name: log.name || '—',
+      linked: Boolean(linkedId),
+    }
+  })
+
+  if (filters.search) {
+    const q = String(filters.search).toLowerCase()
+    rows = rows.filter(
+      (r) =>
+        String(r.device_user_id).toLowerCase().includes(q) ||
+        String(r.employee_id).toLowerCase().includes(q) ||
+        String(r.employee_name).toLowerCase().includes(q),
+    )
+  }
+
+  const unlinked = rows.filter((r) => !r.linked).length
+  return {
+    fromDate,
+    toDate,
+    timezone: ORG_TZ,
+    rows,
+    total: rows.length,
+    unlinked,
+  }
 }
 
 function addCalendarDays(dateStr, days) {
@@ -182,8 +247,11 @@ module.exports = {
   ORG_TZ,
   localDateKey,
   fetchDailyTable,
+  fetchPunchLog,
   fetchRosterSummary,
   fetchPresentRateTrend,
   linkAttendanceEmployeeIds,
   calculateHours,
+  buildPunchMap,
+  punchKeyVariants,
 }

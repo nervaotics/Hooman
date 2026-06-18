@@ -5,7 +5,9 @@ const {
   periodBoundsUtc,
   parseDateKey,
   daysBetweenInclusive,
+  normalizeDevicePunchTime,
 } = require('../lib/timezone.cjs')
+const { resolveDeviceUserId, buildPunchMapFromRows, lookupEmployeeId } = require('../lib/punchMap.cjs')
 
 let lastPollResults = []
 
@@ -113,33 +115,28 @@ async function pullFromDevice(device, store, options = {}) {
     const empRows = await knex('employees')
       .select('id', 'punch_code', 'employee_code')
       .where('is_deleted', false)
-    const punchMap = new Map()
-    for (const row of empRows) {
-      if (row.punch_code) punchMap.set(String(row.punch_code).trim(), row.id)
-      if (row.employee_code) punchMap.set(String(row.employee_code).trim(), row.id)
-    }
+    const punchMap = buildPunchMapFromRows(empRows)
 
     const period = resolveSyncPeriod(options)
     let saved = 0
     let inPeriod = 0
 
     for (const log of logs) {
-      const punchTime =
-        log.timestamp instanceof Date ? log.timestamp : new Date(log.timestamp)
-      if (Number.isNaN(punchTime.getTime())) continue
+      const punchTime = normalizeDevicePunchTime(log.timestamp)
+      if (!punchTime) continue
       if (period && (punchTime < period.start || punchTime > period.end)) continue
       inPeriod += 1
 
       const raw = JSON.stringify(log)
-      const deviceUserId = String(log.uid ?? log.id ?? '').trim()
-      const employeeId = punchMap.get(deviceUserId) ?? null
+      const deviceUserId = resolveDeviceUserId(log)
+      const employeeId = lookupEmployeeId(punchMap, deviceUserId)
       const q = `
         INSERT IGNORE INTO attendance_logs
         (device_id, employee_device_id, employee_id, punch_time, punch_type, raw_data, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
       `
       // eslint-disable-next-line no-await-in-loop
-      await knex.raw(q, [
+      const [result] = await knex.raw(q, [
         device.id,
         deviceUserId,
         employeeId,
@@ -147,7 +144,7 @@ async function pullFromDevice(device, store, options = {}) {
         log.state ?? 0,
         raw,
       ])
-      saved += 1
+      if (Number(result?.affectedRows ?? 0) > 0) saved += 1
     }
 
     return {
@@ -189,6 +186,17 @@ function start(store) {
     const active = devices.filter((d) => d.enabled)
     const results = await Promise.all(active.map((d) => pullFromDevice(d, storeRef)))
     lastPollResults = results
+
+    try {
+      const { getMergedDbConfig, isDbConfigComplete, getOrCreateKnex } = require('../db/connection.cjs')
+      if (isDbConfigComplete(getMergedDbConfig(storeRef))) {
+        const knex = getOrCreateKnex(storeRef)
+        const attendanceService = require('../services/attendanceService.cjs')
+        await attendanceService.linkAttendanceEmployeeIds(knex)
+      }
+    } catch (err) {
+      console.warn('[Hooman] post-sync employee link failed:', err.message)
+    }
   }
 
   cron.schedule('*/5 * * * *', runSync)

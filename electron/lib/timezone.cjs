@@ -43,6 +43,28 @@ function daysBetweenInclusive(fromDateStr, toDateStr) {
   return Math.floor((b - a) / (24 * 60 * 60 * 1000)) + 1
 }
 
+function wallClockToUtc(y, monthIndex, day, hour, minute, second, timeZone = ORG_TZ) {
+  const pad = (n) => String(n).padStart(2, '0')
+  const localIso = `${y}-${pad(monthIndex + 1)}-${pad(day)}T${pad(hour)}:${pad(minute)}:${pad(second)}`
+  return zonedLocalToUtc(localIso, timeZone)
+}
+
+/** ZKTeco decoders use local Date(); re-interpret wall clock as org timezone. */
+function normalizeDevicePunchTime(value, timeZone = ORG_TZ) {
+  if (!value) return null
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return wallClockToUtc(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    d.getHours(),
+    d.getMinutes(),
+    d.getSeconds(),
+    timeZone,
+  )
+}
+
 function zonedLocalToUtc(localIso, timeZone) {
   const [datePart, timePart] = localIso.split('T')
   const [y, m, d] = datePart.split('-').map(Number)
@@ -81,4 +103,6 @@ module.exports = {
   periodBoundsUtc,
   parseDateKey,
   daysBetweenInclusive,
+  normalizeDevicePunchTime,
+  wallClockToUtc,
 }

@@ -61,6 +61,26 @@ interface ElectronApi {
 
   getAttendanceLogs: (filters?: Record<string, unknown>) => Promise<unknown[]>
   getDailyAttendance: (filters?: Record<string, unknown>) => Promise<Record<string, unknown>>
+  getAttendanceRange: (filters?: {
+    fromDate?: string
+    toDate?: string
+    search?: string
+  }) => Promise<{
+    fromDate: string
+    toDate: string
+    timezone: string
+    rows: Array<{
+      id: number
+      punch_time: string
+      punch_date: string
+      device_user_id: string
+      employee_id: string
+      employee_name: string
+      linked: boolean
+    }>
+    total: number
+    unlinked: number
+  }>
   syncAttendance: (filters?: { fromDate?: string; toDate?: string }) => Promise<Record<string, unknown>>
   overrideAttendance: (data: Record<string, unknown>) => Promise<Record<string, unknown>>
   getDeviceStatus: () => Promise<
