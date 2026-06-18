@@ -94,7 +94,7 @@ export default function Login() {
         <button
           type="submit"
           disabled={busy}
-          className="btn-primary w-full py-2"
+          className="btn-primary w-full"
         >
           Sign in
         </button>

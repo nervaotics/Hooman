@@ -27,8 +27,7 @@ const roundMoney2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 const fieldClass =
   'w-full rounded-md border border-border bg-sidebar px-3 py-2 text-sm text-foreground outline-none focus:border-accent'
 const labelClass = 'mb-1 block text-xs font-medium text-muted'
-const btnSecondary =
-  'inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-white/5 disabled:opacity-50'
+const btnSecondary = 'btn-secondary'
 
 function statusClass(status) {
   const s = String(status || '').toLowerCase()
@@ -519,13 +518,13 @@ export default function PayrollProcessingPage() {
               type="button"
               onClick={handleCreatePeriod}
               disabled={loading || !canProcess}
-              className="btn-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="btn-primary disabled:opacity-50"
             >
               {loading ? 'Creating…' : 'Create Period'}
             </button>
             <Link
               to="/payroll"
-              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-white/5"
+              className="btn-secondary"
             >
               Cancel
             </Link>
@@ -587,7 +586,7 @@ export default function PayrollProcessingPage() {
                     type="button"
                     onClick={handleProcessPayroll}
                     disabled={processing || loading}
-                    className="btn-primary inline-flex items-center gap-2 px-3 py-2 text-sm font-medium disabled:opacity-50"
+                    className="btn-primary disabled:opacity-50"
                   >
                     <Play className="h-4 w-4" />
                     {processing ? 'Processing…' : 'Process Payroll'}
@@ -598,7 +597,7 @@ export default function PayrollProcessingPage() {
                     type="button"
                     onClick={handleApprovePeriod}
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Approve Period
@@ -620,7 +619,7 @@ export default function PayrollProcessingPage() {
                     type="button"
                     onClick={handleDeletePeriod}
                     disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-md border border-red-500/30 px-3 py-2 text-sm text-danger hover:bg-red-500/10 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-red-500/30 px-2.5 py-1.5 text-xs text-danger hover:bg-red-500/10 disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete period
@@ -640,7 +639,7 @@ export default function PayrollProcessingPage() {
                   type="button"
                   onClick={handleSavePeriodDetails}
                   disabled={loading}
-                  className="btn-primary mt-4 px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  className="btn-primary mt-4 disabled:opacity-50"
                 >
                   Save period details
                 </button>

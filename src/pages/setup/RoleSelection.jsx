@@ -41,7 +41,7 @@ export default function RoleSelection() {
           type="button"
           disabled={busy}
           onClick={chooseServer}
-          className="btn-primary w-full py-2"
+          className="btn-primary w-full"
         >
           This is the Server PC
         </button>
@@ -49,7 +49,7 @@ export default function RoleSelection() {
           type="button"
           disabled={busy}
           onClick={() => navigate('/setup/client-ip')}
-          className="rounded-md border border-border bg-sidebar px-4 py-2 text-sm text-foreground hover:bg-white/5"
+          className="btn-secondary"
         >
           This is a Client PC
         </button>

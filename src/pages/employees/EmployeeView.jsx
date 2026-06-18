@@ -84,14 +84,14 @@ export default function EmployeeView() {
           <div className="flex gap-2">
             <Link
               to={`/employees/${id}/edit`}
-              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-white/5"
+              className="btn-secondary"
             >
               <Pencil className="h-4 w-4" /> Edit
             </Link>
             <button
               type="button"
               onClick={handleDelete}
-              className="inline-flex items-center gap-2 rounded-md border border-danger/40 px-3 py-2 text-sm text-danger hover:bg-danger/10"
+              className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-2.5 py-1.5 text-xs text-danger hover:bg-danger/10"
             >
               <Trash2 className="h-4 w-4" /> Remove
             </button>

@@ -92,7 +92,7 @@ export default function VouchersPage() {
               <Link
                 key={type}
                 to={`/accounting/vouchers/new?type=${type}`}
-                className="btn-primary inline-flex items-center gap-1 px-3 py-2 text-xs"
+                className="btn-primary"
               >
                 <Plus className="h-3.5 w-3.5" />
                 {type}

@@ -186,7 +186,7 @@ export default function AttendancePage() {
             onClick={handleSync}
             disabled={syncing || !canSync}
             title={canSync ? 'Pull punches from devices' : 'Read-only — sync requires write access'}
-            className="btn-primary inline-flex items-center gap-2 px-4 py-2 disabled:opacity-60"
+            className="btn-primary disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Syncing…' : 'Sync devices'}

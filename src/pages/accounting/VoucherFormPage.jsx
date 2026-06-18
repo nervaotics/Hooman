@@ -332,7 +332,7 @@ export default function VoucherFormPage() {
               <button
                 type="submit"
                 disabled={busy || !totals.balanced}
-                className="btn-primary px-6 py-2 disabled:opacity-60"
+                className="btn-primary disabled:opacity-60"
               >
                 {busy ? 'Saving…' : 'Post voucher'}
               </button>

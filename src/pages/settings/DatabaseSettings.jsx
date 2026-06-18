@@ -10,7 +10,7 @@ export default function DatabaseSettings() {
       </p>
       <button
         type="button"
-        className="btn-primary mt-4 px-4 py-2"
+        className="btn-primary mt-4"
         onClick={() => navigate('/setup/database')}
       >
         Open database setup

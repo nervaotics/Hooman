@@ -199,7 +199,7 @@ export default function Dashboard() {
               .finally(() => setRefreshing(false))
           }}
           disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-white/5 disabled:opacity-60"
+          className="btn-secondary disabled:opacity-60"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh

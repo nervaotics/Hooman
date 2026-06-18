@@ -572,10 +572,10 @@ export default function EmployeeForm() {
         </FormSection>
 
         <div className="flex justify-end gap-3 pt-2">
-          <Link to={isEdit ? `/employees/${id}` : '/employees'} className="rounded-md border border-border px-4 py-2 text-sm text-muted hover:text-foreground">
+          <Link to={isEdit ? `/employees/${id}` : '/employees'} className="btn-secondary text-muted">
             Cancel
           </Link>
-          <button type="submit" disabled={loading} className="btn-primary px-6 py-2">
+          <button type="submit" disabled={loading} className="btn-primary">
             {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Create employee'}
           </button>
         </div>

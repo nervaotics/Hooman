@@ -119,7 +119,7 @@ export default function ChartOfAccountsPage() {
           ))}
         </select>
         {canEdit ? (
-          <button type="button" onClick={openCreate} className="btn-primary inline-flex items-center gap-2 px-4 py-2">
+          <button type="button" onClick={openCreate} className="btn-primary">
             <Plus className="h-4 w-4" />
             New account
           </button>
@@ -248,11 +248,11 @@ export default function ChartOfAccountsPage() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-md border border-border px-4 py-2 text-sm"
+                className="btn-secondary"
               >
                 Cancel
               </button>
-              <button type="submit" disabled={busy} className="btn-primary px-4 py-2 text-sm disabled:opacity-60">
+              <button type="submit" disabled={busy} className="btn-primary disabled:opacity-60">
                 {busy ? 'Saving…' : 'Save'}
               </button>
             </div>

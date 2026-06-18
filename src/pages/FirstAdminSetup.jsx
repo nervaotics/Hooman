@@ -77,7 +77,7 @@ export default function FirstAdminSetup() {
         <button
           type="submit"
           disabled={busy}
-          className="btn-primary w-full py-2"
+          className="btn-primary w-full"
         >
           Create admin & go to sign in
         </button>

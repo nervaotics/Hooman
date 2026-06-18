@@ -97,7 +97,7 @@ export default function EmployeeList() {
           {canEditEmployees ? (
             <Link
               to="/employees/new"
-              className="btn-primary inline-flex items-center gap-2 px-4 py-2"
+              className="btn-primary"
             >
               <Plus className="h-4 w-4" />
               Add employee
@@ -121,7 +121,7 @@ export default function EmployeeList() {
         <button
           type="button"
           onClick={() => setShowFilters((v) => !v)}
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-white/5"
+          className="btn-secondary"
         >
           <SlidersHorizontal className="h-4 w-4" />
           Filters

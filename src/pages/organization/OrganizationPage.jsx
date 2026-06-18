@@ -98,7 +98,7 @@ function EntityPanel({
             />
           </label>
           <div className="flex gap-2">
-            <button type="submit" disabled={busy} className="btn-primary inline-flex items-center gap-2 px-4 py-2">
+            <button type="submit" disabled={busy} className="btn-primary">
               <Plus className="h-4 w-4" />
               {busy ? 'Saving…' : editing ? 'Save' : 'Add'}
             </button>
@@ -106,7 +106,7 @@ function EntityPanel({
               <button
                 type="button"
                 onClick={reset}
-                className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm hover:bg-white/5"
+                className="btn-secondary"
               >
                 <X className="h-4 w-4" />
                 Cancel

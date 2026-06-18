@@ -167,7 +167,7 @@ export default function DatabaseSetup() {
           type="button"
           disabled={busy}
           onClick={test}
-          className="rounded-md border border-border bg-sidebar px-4 py-2 text-sm font-medium text-foreground hover:bg-white/5 disabled:opacity-50"
+          className="btn-secondary disabled:opacity-50"
         >
           Test connection
         </button>
@@ -175,7 +175,7 @@ export default function DatabaseSetup() {
           type="button"
           disabled={busy}
           onClick={save}
-          className="btn-primary px-4 py-2 font-medium"
+          className="btn-primary"
         >
           Save & continue
         </button>

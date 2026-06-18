@@ -77,7 +77,7 @@ export default function EmployeeBulkImport() {
           <button
             type="button"
             onClick={downloadTemplate}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-sidebar px-3 py-2 text-sm hover:bg-white/5"
+            className="btn-secondary bg-sidebar"
           >
             <Download className="h-4 w-4" />
             Download template
@@ -86,7 +86,7 @@ export default function EmployeeBulkImport() {
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="btn-primary inline-flex items-center gap-2 px-3 py-2 disabled:opacity-60"
+            className="btn-primary disabled:opacity-60"
           >
             <Upload className="h-4 w-4" />
             {busy ? 'Importing…' : 'Choose CSV file'}

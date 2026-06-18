@@ -17,7 +17,7 @@ export default function Topbar() {
         </div>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-sidebar px-3 py-1.5 text-sm text-foreground hover:bg-white/5"
+          className="btn-secondary bg-sidebar"
           onClick={async () => {
             await window.electron?.logout?.()
             navigate('/login', { replace: true, state: { afterLogout: true } })

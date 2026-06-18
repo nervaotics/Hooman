@@ -106,7 +106,7 @@ export default function DeviceSettings() {
           type="button"
           disabled={busy}
           onClick={save}
-          className="btn-primary px-4 py-2"
+          className="btn-primary"
         >
           Save devices
         </button>
@@ -125,7 +125,7 @@ export default function DeviceSettings() {
               },
             ])
           }
-          className="rounded-md border border-border bg-sidebar px-4 py-2 text-sm text-foreground hover:bg-white/5"
+          className="btn-secondary"
         >
           Add device
         </button>

@@ -124,7 +124,7 @@ export default function PayrollPage() {
         {canProcess && (
           <Link
             to="/payroll/processing"
-            className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
+            className="btn-primary"
           >
             <Plus className="h-4 w-4" />
             Create New Period
@@ -161,7 +161,7 @@ export default function PayrollPage() {
             {canProcess && (
               <Link
                 to="/payroll/processing"
-                className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
+                className="btn-primary"
               >
                 <Plus className="h-4 w-4" />
                 Create First Period

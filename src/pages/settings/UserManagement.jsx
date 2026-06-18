@@ -146,7 +146,7 @@ export default function UserManagement() {
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="btn-primary inline-flex items-center gap-2 px-4 py-2"
+            className="btn-primary"
           >
             <Plus className="h-4 w-4" />
             Add user
@@ -203,13 +203,13 @@ export default function UserManagement() {
           </div>
 
           <div className="flex gap-2">
-            <button type="submit" disabled={busy} className="btn-primary px-4 py-2 disabled:opacity-60">
+            <button type="submit" disabled={busy} className="btn-primary disabled:opacity-60">
               {busy ? 'Saving…' : editing ? 'Save changes' : 'Create user'}
             </button>
             <button
               type="button"
               onClick={resetForm}
-              className="rounded-md border border-border px-4 py-2 text-sm hover:bg-white/5"
+              className="btn-secondary"
             >
               Cancel
             </button>

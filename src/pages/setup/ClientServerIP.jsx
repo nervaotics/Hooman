@@ -65,14 +65,14 @@ export default function ClientServerIP() {
       ) : null}
 
       <div className="mt-6 flex gap-2">
-        <button type="button" disabled={busy} onClick={testConnection} className="btn-primary px-4 py-2">
+        <button type="button" disabled={busy} onClick={testConnection} className="btn-primary">
           Test connection
         </button>
         <button
           type="button"
           disabled={busy}
           onClick={save}
-          className="rounded-md border border-border bg-sidebar px-4 py-2 text-sm text-foreground hover:bg-white/5"
+          className="btn-secondary"
         >
           Save and continue
         </button>
