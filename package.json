@@ -2,7 +2,7 @@
   "name": "hooman",
   "productName": "Hooman",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Hooman — HRM desktop for Windows (Electron + React + MySQL)",
   "repository": {
     "type": "git",
