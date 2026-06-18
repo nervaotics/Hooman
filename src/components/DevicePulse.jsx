@@ -39,7 +39,11 @@ export default function DevicePulse() {
                     ? 'text-danger'
                     : 'text-warning'
               }
-              title={d.lastMessage ?? ''}
+              title={
+                d.status === 'online'
+                  ? 'Connected'
+                  : d.lastMessage || 'Offline or not synced yet'
+              }
             >
               {d.status === 'online'
                 ? '●'

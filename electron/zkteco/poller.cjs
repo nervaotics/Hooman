@@ -10,6 +10,31 @@ const {
 const { resolveDeviceUserId, buildPunchMapFromRows, lookupEmployeeId } = require('../lib/punchMap.cjs')
 
 let lastPollResults = []
+let syncChain = Promise.resolve()
+
+function withDeviceSyncLock(fn) {
+  const run = syncChain.then(fn, fn)
+  syncChain = run.catch(() => {})
+  return run
+}
+
+function inportForDevice(deviceIndex = 0) {
+  return 40232 + (deviceIndex % 50)
+}
+
+function formatDeviceError(message) {
+  const msg = String(message || '').trim()
+  if (!msg) return 'Could not connect to device.'
+  if (/EADDRINUSE/i.test(msg)) {
+    return 'Sync busy — another device is using the connection port. Try again in a moment.'
+  }
+  if (/timeout/i.test(msg)) return 'Device did not respond in time.'
+  if (/econnrefused|ehostunreach|enotfound|network is unreachable/i.test(msg)) {
+    return 'Cannot reach this device on the network. Check IP and cable/Wi‑Fi.'
+  }
+  if (/ack error|zero length reply|^zero$/i.test(msg)) return 'Device rejected the connection.'
+  return msg.length > 120 ? 'Could not connect to device.' : msg
+}
 
 function getLastPollResults() {
   return lastPollResults
@@ -62,8 +87,9 @@ function resolveSyncPeriod(options = {}) {
 /**
  * @param {import('electron-store')} store
  * @param {{ fromDate?: string, toDate?: string }} [options]
+ * @param {number} [deviceIndex]
  */
-async function pullFromDevice(device, store, options = {}) {
+async function pullFromDevice(device, store, options = {}, deviceIndex = 0) {
   let ZKLib
   try {
     ZKLib = require('zklib')
@@ -102,7 +128,7 @@ async function pullFromDevice(device, store, options = {}) {
   const zk = new ZKLib({
     ip: device.ip,
     port: Number(device.port) || 4370,
-    inport: 40232,
+    inport: inportForDevice(deviceIndex),
     timeout: 20000,
     connectionType: ConnectionTypes.UDP,
   })
@@ -161,7 +187,7 @@ async function pullFromDevice(device, store, options = {}) {
   } catch (err) {
     return {
       success: false,
-      error: err.message,
+      error: formatDeviceError(err.message),
       device: device.name,
       ip: device.ip,
       syncing: false,
@@ -181,25 +207,32 @@ async function pullFromDevice(device, store, options = {}) {
 function start(store) {
   const storeRef = store || new Store()
 
-  const runSync = async () => {
-    const devices = storeRef.get('zkteco_devices', DEFAULT_DEVICES)
-    const active = devices.filter((d) => d.enabled)
-    const results = await Promise.all(active.map((d) => pullFromDevice(d, storeRef)))
-    lastPollResults = results
-
-    try {
-      const { getMergedDbConfig, isDbConfigComplete, getOrCreateKnex } = require('../db/connection.cjs')
-      if (isDbConfigComplete(getMergedDbConfig(storeRef))) {
-        const knex = getOrCreateKnex(storeRef)
-        const attendanceService = require('../services/attendanceService.cjs')
-        await attendanceService.linkAttendanceEmployeeIds(knex)
+  const runSync = () =>
+    withDeviceSyncLock(async () => {
+      const devices = storeRef.get('zkteco_devices', DEFAULT_DEVICES)
+      const active = devices.filter((d) => d.enabled)
+      const results = []
+      for (let i = 0; i < active.length; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        results.push(await pullFromDevice(active[i], storeRef, {}, i))
       }
-    } catch (err) {
-      console.warn('[Hooman] post-sync employee link failed:', err.message)
-    }
-  }
+      lastPollResults = results
 
-  cron.schedule('*/5 * * * *', runSync)
+      try {
+        const { getMergedDbConfig, isDbConfigComplete, getOrCreateKnex } = require('../db/connection.cjs')
+        if (isDbConfigComplete(getMergedDbConfig(storeRef))) {
+          const knex = getOrCreateKnex(storeRef)
+          const attendanceService = require('../services/attendanceService.cjs')
+          await attendanceService.linkAttendanceEmployeeIds(knex)
+        }
+      } catch (err) {
+        console.warn('[Hooman] post-sync employee link failed:', err.message)
+      }
+    })
+
+  cron.schedule('*/5 * * * *', () => {
+    runSync().catch((err) => console.warn('[Hooman] scheduled ZKTeco sync failed:', err.message))
+  })
 
   setTimeout(() => {
     runSync().catch((err) => console.warn('[Hooman] initial ZKTeco sync failed:', err.message))
@@ -208,4 +241,4 @@ function start(store) {
   console.log('[Hooman] ZKTeco poller scheduled (every 5 minutes)')
 }
 
-module.exports = { start, pullFromDevice, getLastPollResults }
+module.exports = { start, pullFromDevice, getLastPollResults, withDeviceSyncLock }
