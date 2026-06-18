@@ -40,8 +40,18 @@ export default function SettingsOverview() {
   const checkNow = async () => {
     setBusy(true)
     try {
-      await window.electron.checkUpdatesNow?.()
-      toast.success('Update check started')
+      const result = await window.electron.checkUpdatesNow?.()
+      if (result?.error) {
+        toast.error(result.error)
+      } else if (result?.skipped === 'not-packaged') {
+        toast.message('Updates apply to the installed app only (not dev mode).')
+      } else if (result?.hasUpdate) {
+        toast.success(`Update available: v${result.version}`)
+      } else if (result?.ok) {
+        toast.success('You are on the latest version.')
+      } else {
+        toast.success('Update check finished.')
+      }
     } catch (e) {
       toast.error(e?.message || 'Update check failed')
     } finally {

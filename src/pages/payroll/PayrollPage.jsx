@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Calendar,
@@ -47,7 +47,7 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState(null)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const data = await window.electron.getPayrollPeriods()
@@ -58,11 +58,12 @@ export default function PayrollPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    load()
-  }, [])
+    const t = setTimeout(load, 0)
+    return () => clearTimeout(t)
+  }, [load])
 
   const stats = useMemo(
     () => ({

@@ -30,6 +30,34 @@ function sendStatus(win, payload) {
   win?.webContents?.send('update-status', payload)
 }
 
+/** GitHub returns 404 for missing/private release feeds — not always a bad token. */
+function humanizeUpdateError(err) {
+  const msg = String(err?.message || err || '')
+  const isGithubFeed =
+    /releases\.atom|github\.com/i.test(msg) || /nervaotics\/Hooman/i.test(msg)
+
+  if (isGithubFeed && /404/.test(msg)) {
+    return (
+      'No public GitHub release found for nervaotics/Hooman yet. ' +
+      'Push a version tag (e.g. v0.1.2) so GitHub Actions can publish the installer. ' +
+      'If the repository is private, publish releases publicly or disable auto-check in Settings.'
+    )
+  }
+
+  if (isGithubFeed && /401|403/.test(msg)) {
+    return (
+      'GitHub blocked access to the release feed. ' +
+      'Auto-update needs a public repository with published releases.'
+    )
+  }
+
+  if (/authentication token/i.test(msg) && /404/.test(msg)) {
+    return humanizeUpdateError({ message: '404 github.com/nervaotics/Hooman/releases.atom' })
+  }
+
+  return msg || 'Update check failed'
+}
+
 function applyUpdaterRuntimeConfig(store) {
   const cfg = getSettings(store)
   autoUpdater.autoDownload = Boolean(cfg.autoDownload)
@@ -57,16 +85,25 @@ function schedulePeriodicChecks(win, store) {
 async function checkForUpdates(win, store) {
   if (!app.isPackaged) return { ok: false, skipped: 'not-packaged' }
   applyUpdaterRuntimeConfig(store)
-  const result = await autoUpdater.checkForUpdates()
-  const hasUpdate = Boolean(result?.updateInfo?.version)
-  if (hasUpdate) {
-    sendStatus(win, {
-      type: 'available',
-      version: result.updateInfo.version,
-      message: `Version ${result.updateInfo.version} is available.`,
-    })
+  try {
+    const result = await autoUpdater.checkForUpdates()
+    const hasUpdate = Boolean(result?.updateInfo?.version)
+    if (hasUpdate) {
+      sendStatus(win, {
+        type: 'available',
+        version: result.updateInfo.version,
+        message: `Version ${result.updateInfo.version} is available.`,
+      })
+    } else {
+      sendStatus(win, { type: 'none', message: 'Already on latest version.' })
+    }
+    return { ok: true, hasUpdate, version: result?.updateInfo?.version || null }
+  } catch (err) {
+    const message = humanizeUpdateError(err)
+    sendStatus(win, { type: 'error', message })
+    console.warn('[Hooman] update check failed:', message)
+    return { ok: false, error: message }
   }
-  return { ok: true, hasUpdate, version: result?.updateInfo?.version || null }
 }
 
 /**
@@ -90,7 +127,9 @@ function init(win, store) {
       sendStatus(win, { type: 'none', message: 'Already on latest version.' })
     })
     autoUpdater.on('error', (err) => {
-      sendStatus(win, { type: 'error', message: err?.message || 'Update failed' })
+      const message = humanizeUpdateError(err)
+      sendStatus(win, { type: 'error', message })
+      console.warn('[Hooman] updater error:', message)
     })
     autoUpdater.on('update-downloaded', (info) => {
       win?.webContents?.send('update-ready')
@@ -118,4 +157,5 @@ module.exports = {
   saveSettings,
   checkForUpdates,
   schedulePeriodicChecks,
+  humanizeUpdateError,
 }

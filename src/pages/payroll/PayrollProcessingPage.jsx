@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -79,17 +79,18 @@ export default function PayrollProcessingPage() {
   const [currentPeriod, setCurrentPeriod] = useState(null)
   const [payrollRecords, setPayrollRecords] = useState([])
   const [periodAttendance, setPeriodAttendance] = useState([])
-  const [rowDrafts, setRowDrafts] = useState({})
+  const [rowDraftEdits, setRowDraftEdits] = useState({})
   const [statutoryPreview, setStatutoryPreview] = useState({ eobi_wage_ceiling_pkr: 37000 })
   const [formData, setFormData] = useState(newPeriodDefaults)
 
-  const loadPeriod = async (id) => {
+  const loadPeriod = useCallback(async (id) => {
     setLoading(true)
     try {
       const { period, records } = await window.electron.getPayrollPeriod(id)
       if (!period) throw new Error('Payroll period not found')
       setCurrentPeriod(period)
       setPayrollRecords(records || [])
+      setRowDraftEdits({})
       setFormData({
         period_name: period.period_name,
         period_month: period.period_month,
@@ -103,19 +104,24 @@ export default function PayrollProcessingPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (periodId) {
-      loadPeriod(periodId)
-    } else {
+      const t = setTimeout(() => loadPeriod(periodId), 0)
+      return () => clearTimeout(t)
+    }
+    const t = setTimeout(() => {
       setCurrentPeriod(null)
       setPayrollRecords([])
+      setRowDraftEdits({})
+      setPeriodAttendance([])
       setFormData(newPeriodDefaults())
-    }
-  }, [periodId])
+    }, 0)
+    return () => clearTimeout(t)
+  }, [periodId, loadPeriod])
 
-  useEffect(() => {
+  const baseRowDrafts = useMemo(() => {
     const m = {}
     for (const r of payrollRecords) {
       m[r.id] = {
@@ -123,23 +129,34 @@ export default function PayrollProcessingPage() {
         deduction: Number(parseFloat(r.deduction_amount) || 0),
       }
     }
-    setRowDrafts(m)
+    return m
   }, [payrollRecords])
 
+  const rowDrafts = useMemo(() => {
+    const merged = { ...baseRowDrafts }
+    for (const [id, edits] of Object.entries(rowDraftEdits)) {
+      if (merged[id]) merged[id] = { ...merged[id], ...edits }
+    }
+    return merged
+  }, [baseRowDrafts, rowDraftEdits])
+
+  const attendanceEmployeeIds = useMemo(
+    () => [...new Set(payrollRecords.map((r) => r.employee_id).filter(Boolean))],
+    [payrollRecords],
+  )
+
+  const shouldLoadAttendance = Boolean(currentPeriod?.id && attendanceEmployeeIds.length)
+
   useEffect(() => {
-    if (!currentPeriod?.id || !payrollRecords.length) {
-      setPeriodAttendance([])
-      return
-    }
-    const ids = [...new Set(payrollRecords.map((r) => r.employee_id).filter(Boolean))]
-    if (!ids.length) {
-      setPeriodAttendance([])
-      return
-    }
+    if (!shouldLoadAttendance) return undefined
+
     let cancelled = false
     ;(async () => {
       try {
-        const { rows } = await window.electron.getPayrollPeriodAttendance(currentPeriod.id, ids)
+        const { rows } = await window.electron.getPayrollPeriodAttendance(
+          currentPeriod.id,
+          attendanceEmployeeIds,
+        )
         if (!cancelled) setPeriodAttendance(rows || [])
       } catch (e) {
         console.warn('[Payroll] attendance load failed:', e?.message)
@@ -149,7 +166,12 @@ export default function PayrollProcessingPage() {
     return () => {
       cancelled = true
     }
-  }, [currentPeriod?.id, payrollRecords])
+  }, [currentPeriod?.id, attendanceEmployeeIds, shouldLoadAttendance])
+
+  const displayAttendance = useMemo(
+    () => (shouldLoadAttendance ? periodAttendance : []),
+    [shouldLoadAttendance, periodAttendance],
+  )
 
   useEffect(() => {
     if (!currentPeriod?.id) return
@@ -172,7 +194,7 @@ export default function PayrollProcessingPage() {
     const ceiling = Math.max(0, Number(statutoryPreview?.eobi_wage_ceiling_pkr) || 0)
     return payrollRecords.map((record) => {
       const empId = record.employee_id
-      const rows = periodAttendance.filter((a) => a.employee_id === empId)
+      const rows = displayAttendance.filter((a) => a.employee_id === empId)
       const monthlyAllotted = parseFloat(record.salary_structure?.gross_salary ?? 0) || 0
       const draft = rowDrafts[record.id]
       const arrears = draft ? draft.arrears : Number(parseFloat(record.arrears) || 0)
@@ -184,7 +206,7 @@ export default function PayrollProcessingPage() {
       const previewNet = roundMoney2(Math.max(0, grossLine - previewEobiEmployee))
       return { record, metrics, monthlyAllotted, previewNet }
     })
-  }, [payrollRecords, periodAttendance, rowDrafts, statutoryPreview])
+  }, [payrollRecords, displayAttendance, rowDrafts, statutoryPreview])
 
   const canEditPeriodMeta =
     currentPeriod && canProcess && ['Draft', 'Processing'].includes(currentPeriod.status)
@@ -279,6 +301,11 @@ export default function PayrollProcessingPage() {
       await window.electron.updatePayrollRecord(recordId, {
         arrears: draft.arrears,
         deduction_amount: draft.deduction,
+      })
+      setRowDraftEdits((prev) => {
+        const next = { ...prev }
+        delete next[recordId]
+        return next
       })
       await loadPeriod(currentPeriod.id)
     } catch (e) {
@@ -748,10 +775,10 @@ export default function PayrollProcessingPage() {
                                   const raw = e.target.value
                                   const v = raw === '' ? 0 : Number(raw)
                                   if (raw !== '' && !Number.isFinite(v)) return
-                                  setRowDrafts((prev) => ({
-                                    ...prev,
-                                    [record.id]: { ...adj, arrears: v },
-                                  }))
+                              setRowDraftEdits((prev) => ({
+                                ...prev,
+                                [record.id]: { ...(prev[record.id] || {}), arrears: v },
+                              }))
                                 }}
                                 onBlur={() => handlePersistRowAdjustments(record.id)}
                                 className="w-20 rounded border border-slate-300 px-1 py-0.5"
@@ -771,10 +798,10 @@ export default function PayrollProcessingPage() {
                                   const raw = e.target.value
                                   const v = raw === '' ? 0 : Number(raw)
                                   if (raw !== '' && !Number.isFinite(v)) return
-                                  setRowDrafts((prev) => ({
-                                    ...prev,
-                                    [record.id]: { ...adj, deduction: v },
-                                  }))
+                              setRowDraftEdits((prev) => ({
+                                ...prev,
+                                [record.id]: { ...(prev[record.id] || {}), deduction: v },
+                              }))
                                 }}
                                 onBlur={() => handlePersistRowAdjustments(record.id)}
                                 className="w-20 rounded border border-slate-300 px-1 py-0.5"
