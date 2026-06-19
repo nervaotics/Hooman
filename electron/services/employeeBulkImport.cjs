@@ -1,3 +1,4 @@
+const { insertReturningId } = require('../db/dialect.cjs')
 const { formatCNIC, isValidCNIC, formatPhone, isValidPhone } = require('../lib/validators.cjs')
 const { getNextEmployeeCode } = require('../lib/employeeCodes.cjs')
 const { buildEmployeePayload, checkCnicDuplicate, persistSalary } = require('./employeeService.cjs')
@@ -111,11 +112,9 @@ async function findOrCreateDepartment(knex, name) {
   if (!trimmed) return null
   const existing = await knex('departments').where({ name: trimmed }).first()
   if (existing) return existing.id
-  const [id] = await knex('departments').insert({
+  const id = await insertReturningId(knex, 'departments', {
     name: trimmed,
     code: null,
-    created_at: new Date(),
-    updated_at: new Date(),
   })
   return id
 }
@@ -128,12 +127,10 @@ async function findOrCreateArea(knex, name) {
   if (!trimmed) return null
   const existing = await knex('areas').where({ name: trimmed, is_deleted: false }).first()
   if (existing) return existing.id
-  const [id] = await knex('areas').insert({
+  const id = await insertReturningId(knex, 'areas', {
     name: trimmed,
     code: null,
     is_deleted: false,
-    created_at: new Date(),
-    updated_at: new Date(),
   })
   return id
 }
@@ -282,7 +279,7 @@ async function bulkImportFromCsv(knex, csvText) {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      const [id] = await knex('employees').insert(employeeRow)
+      const id = await insertReturningId(knex, 'employees', employeeRow)
 
       if (areaId || departmentId) {
         // eslint-disable-next-line no-await-in-loop

@@ -5,6 +5,7 @@ import {
   Calendar,
   CheckCircle2,
   DollarSign,
+  Download,
   Play,
   Printer,
   RotateCcw,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { toastError } from '@/lib/notify.js'
+import { downloadCsvFile } from '@/lib/downloadCsv.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { canWrite } from '@/lib/permissions.js'
 import {
@@ -82,6 +84,7 @@ export default function PayrollProcessingPage() {
 
   const [loading, setLoading] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [exporting, setExporting] = useState(null)
   const [currentPeriod, setCurrentPeriod] = useState(null)
   const [payrollRecords, setPayrollRecords] = useState([])
   const [periodAttendance, setPeriodAttendance] = useState([])
@@ -415,6 +418,25 @@ export default function PayrollProcessingPage() {
     window.print()
   }
 
+  const handleExportStatutory = async (format) => {
+    if (!currentPeriod?.id || payrollRecords.length === 0) {
+      toast.error('Process payroll first so there are rows to export.')
+      return
+    }
+    setExporting(format)
+    try {
+      const result = await window.electron.exportPayrollStatutory(currentPeriod.id, format)
+      downloadCsvFile(result.csv, result.filename)
+      toast.success(
+        `Exported ${result.rowCount} row${result.rowCount === 1 ? '' : 's'} (${format.toUpperCase()})`,
+      )
+    } catch (e) {
+      toastError(e, `Could not export ${format.toUpperCase()} CSV.`)
+    } finally {
+      setExporting(null)
+    }
+  }
+
   const periodFormFields = (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <label className="block text-sm">
@@ -572,14 +594,34 @@ export default function PayrollProcessingPage() {
               </span>
               <div className="flex flex-wrap gap-2">
                 {payrollRecords.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handlePrintPayroll}
-                    className={btnSecondary}
-                  >
-                    <Printer className="h-4 w-4" />
-                    Print
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePrintPayroll}
+                      className={btnSecondary}
+                    >
+                      <Printer className="h-4 w-4" />
+                      Print
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExportStatutory('sessi')}
+                      disabled={Boolean(exporting)}
+                      className={btnSecondary}
+                    >
+                      <Download className="h-4 w-4" />
+                      {exporting === 'sessi' ? 'Exporting…' : 'SESSI CSV'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExportStatutory('eobi')}
+                      disabled={Boolean(exporting)}
+                      className={btnSecondary}
+                    >
+                      <Download className="h-4 w-4" />
+                      {exporting === 'eobi' ? 'Exporting…' : 'EOBI CSV'}
+                    </button>
+                  </>
                 )}
                 {['Draft', 'Processing'].includes(currentPeriod.status) && canProcess && (
                   <button
@@ -692,7 +734,9 @@ export default function PayrollProcessingPage() {
                 <strong>Rules:</strong> Monthly ÷ 26 = rate per day; hourly base = Monthly ÷ 26 ÷ 8. Overtime
                 rate = hourly base × 2. Holiday rate = hourly base × 3 (Sundays when attended). Late
                 deduction = hourly base × late hours (after 08:10). EOBI (1%) applies to net where
-                configured. Arrears and deductions are editable in Draft; saved on blur.
+                configured. Arrears and deductions are editable in Draft; saved on blur. Use{' '}
+                <strong>SESSI CSV</strong> and <strong>EOBI CSV</strong> for statutory filings (fill EOBI
+                numbers on employee profiles first).
               </p>
               <div className="overflow-x-auto rounded-lg border border-border bg-card">
                 <table className="min-w-[2400px] text-xs">

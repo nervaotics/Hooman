@@ -1,32 +1,47 @@
 require('dotenv').config()
 
+const fs = require('fs')
 const {
-  getMigrationsDirectory,
-  formatMigrationBundleError,
-} = require('./migrationsDir.cjs')
+  getSupabaseConfig,
+  isSupabaseConfigured,
+  buildPostgresConnection,
+  getSchemaSqlPaths,
+} = require('./supabaseConfig.cjs')
+
+/**
+ * @param {import('electron-store')} store
+ */
+function getDataProvider(store) {
+  const supabase = getSupabaseConfig(store)
+  if (isSupabaseConfigured(supabase)) return 'supabase'
+  return 'legacy'
+}
 
 /**
  * @param {import('electron-store')} store
  */
 function getMergedDbConfig(store) {
-  const saved = store.get('db_config', null)
-  return {
-    host: saved?.host ?? process.env.DB_HOST ?? '127.0.0.1',
-    port: Number(saved?.port ?? process.env.DB_PORT ?? 3306),
-    user: saved?.user ?? process.env.DB_USER ?? 'root',
-    password: saved?.password ?? process.env.DB_PASS ?? '',
-    database: saved?.database ?? process.env.DB_NAME ?? 'hooman_hrm',
+  const supabase = getSupabaseConfig(store)
+  if (isSupabaseConfigured(supabase)) {
+    const conn = buildPostgresConnection(supabase)
+    return {
+      provider: 'supabase',
+      host: conn.host,
+      port: conn.port,
+      user: conn.user,
+      password: conn.password,
+      database: conn.database,
+      supabaseUrl: supabase.url,
+      supabaseAnonKey: supabase.anonKey,
+      supabaseServiceRoleKey: supabase.serviceRoleKey,
+    }
   }
+
+  return { provider: 'legacy' }
 }
 
 function isDbConfigComplete(cfg) {
-  return Boolean(
-    cfg &&
-      cfg.host &&
-      cfg.database &&
-      cfg.user !== undefined &&
-      cfg.user !== null,
-  )
+  return cfg?.provider === 'supabase' && Boolean(cfg.host && cfg.password && cfg.database)
 }
 
 /**
@@ -34,34 +49,24 @@ function isDbConfigComplete(cfg) {
  */
 function getKnex(store) {
   const knex = require('knex')
-  const cfg = getMergedDbConfig(store)
-  if (!isDbConfigComplete(cfg)) {
-    throw new Error('Database is not configured')
+  const supabase = getSupabaseConfig(store)
+  if (!isSupabaseConfigured(supabase)) {
+    throw new Error('Supabase is not configured. Complete setup first.')
   }
-  const migrationsDirectory = getMigrationsDirectory()
+
   return knex({
-    client: 'mysql2',
-    connection: {
-      host: cfg.host,
-      port: cfg.port,
-      user: cfg.user,
-      password: cfg.password,
-      database: cfg.database,
-      timezone: 'Z',
-    },
+    client: 'pg',
+    connection: buildPostgresConnection(supabase),
     pool: { min: 0, max: 10 },
-    migrations: {
-      directory: migrationsDirectory,
-      loadExtensions: ['.cjs', '.js'],
-    },
+    searchPath: ['public'],
   })
 }
 
 let knexSingleton = null
 let knexSignature = ''
 /** @type {Promise<void> | null} */
-let migrationFlight = null
-let migrationsReady = false
+let schemaFlight = null
+let schemaReady = false
 
 /**
  * @param {import('electron-store')} store
@@ -85,43 +90,51 @@ async function resetKnex() {
     knexSingleton = null
     knexSignature = ''
   }
-  migrationFlight = null
-  migrationsReady = false
+  schemaFlight = null
+  schemaReady = false
+}
+
+async function applySupabaseSchema(knex) {
+  const paths = getSchemaSqlPaths()
+  for (const filePath of paths) {
+    const sql = fs.readFileSync(filePath, 'utf8')
+    const statements = sql
+      .split(/;\s*\n/)
+      .map((s) => s.trim())
+      .filter((s) => s && !s.startsWith('--'))
+    for (const statement of statements) {
+      if (!statement) continue
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await knex.raw(`${statement};`)
+      } catch (err) {
+        const msg = String(err?.message || err)
+        if (/already exists|duplicate key|IF NOT EXISTS/i.test(msg)) continue
+        console.warn('[Hooman] schema statement skipped:', msg.slice(0, 120))
+      }
+    }
+  }
 }
 
 /**
- * Run pending migrations once per process (serialized — avoids knex lock races).
  * @param {import('electron-store')} store
  * @param {{ force?: boolean }} [opts]
  */
 async function ensureMigrations(store, opts = {}) {
-  if (migrationsReady && !opts.force) return
-  if (migrationFlight) return migrationFlight
+  if (schemaReady && !opts.force) return
+  if (schemaFlight) return schemaFlight
 
-  migrationFlight = (async () => {
-    const migrationsDirectory = getMigrationsDirectory()
+  schemaFlight = (async () => {
     const k = getOrCreateKnex(store)
-    try {
-      try {
-        await k.migrate.latest()
-      } catch (err) {
-        const msg = String(err?.message || err || '')
-        if (/already locked/i.test(msg)) {
-          await k.migrate.forceFreeMigrationsLock()
-          await k.migrate.latest()
-        } else {
-          throw err
-        }
-      }
-      migrationsReady = true
-    } catch (err) {
-      throw new Error(formatMigrationBundleError(err, migrationsDirectory))
-    } finally {
-      migrationFlight = null
+    const hasDepartments = await k.schema.hasTable('departments')
+    if (!hasDepartments || opts.force) {
+      await applySupabaseSchema(k)
     }
+    schemaReady = true
+    schemaFlight = null
   })()
 
-  return migrationFlight
+  return schemaFlight
 }
 
 /** @deprecated Use ensureMigrations */
@@ -133,6 +146,10 @@ async function runMigrations(store) {
  * @param {import('electron-store')} store
  */
 async function pingDatabase(store) {
+  const cfg = getMergedDbConfig(store)
+  if (!isDbConfigComplete(cfg)) {
+    throw new Error('Database is not configured')
+  }
   const k = getKnex(store)
   try {
     await k.raw('select 1 as ok')
@@ -145,6 +162,7 @@ async function pingDatabase(store) {
 }
 
 module.exports = {
+  getDataProvider,
   getMergedDbConfig,
   isDbConfigComplete,
   getKnex,
@@ -153,4 +171,6 @@ module.exports = {
   ensureMigrations,
   runMigrations,
   pingDatabase,
+  getSupabaseConfig,
+  isSupabaseConfigured,
 }

@@ -5,8 +5,18 @@ const {
   resetKnex,
   runMigrations,
 } = require('../db/connection.cjs')
+const {
+  getSupabaseConfig,
+  getSupabasePublicMeta,
+  extractProjectRef,
+  writeSupabaseStore,
+} = require('../db/supabaseConfig.cjs')
 const { authorizeSettings } = require('../lib/authGuard.cjs')
 const { stripToken } = require('../lib/ipcPayload.cjs')
+const {
+  getAutoLaunchSettings,
+  saveAutoLaunchSettings,
+} = require('../autoLaunch.cjs')
 
 /**
  * @param {import('electron').IpcMain} ipcMain
@@ -16,78 +26,60 @@ module.exports = function registerSettingsIpc(ipcMain, store) {
   ipcMain.handle('settings:getDb', async (_e, payload) => {
     await authorizeSettings(store, payload)
     const merged = getMergedDbConfig(store)
-    const saved = store.get('db_config', null)
+    const supabase = getSupabasePublicMeta(store)
     const { password: _pw, ...rest } = merged
     return {
       merged: {
         ...rest,
         password: '',
-        passwordIsSet: Boolean(merged.password),
+        passwordIsSet: Boolean(merged.password || supabase?.dbPasswordIsSet),
+        provider: merged.provider || 'supabase',
       },
-      saved,
+      supabase,
     }
   })
 
-  ipcMain.handle('settings:saveDb', async (_e, payload) => {
+  ipcMain.handle('settings:getSupabase', async (_e, payload) => {
+    await authorizeSettings(store, payload)
+    return getSupabasePublicMeta(store)
+  })
+
+  ipcMain.handle('settings:saveSupabase', async (_e, payload) => {
     await authorizeSettings(store, payload)
     const { clean } = stripToken(payload)
-    const config = clean.host !== undefined ? clean : payload
-    if (!config?.host || !config?.database || !config?.user) {
-      throw new Error('host, database, and user are required')
-    }
-    const prev = store.get('db_config', null)
-    const nextPassword =
-      config.password === undefined ||
-      config.password === null ||
-      String(config.password).trim() === ''
-        ? prev?.password ?? ''
-        : String(config.password)
-
-    store.set('db_config', {
-      host: config.host,
-      port: config.port ?? 3306,
-      user: config.user,
-      password: nextPassword,
-      database: config.database,
-    })
+    const config = clean.url !== undefined ? clean : payload
+    writeSupabaseStore(store, config)
     await resetKnex()
     await pingDatabase(store)
     await runMigrations(store)
     return { ok: true }
   })
 
-  ipcMain.handle('settings:testDb', async (_e, payload) => {
+  ipcMain.handle('settings:testSupabase', async (_e, payload) => {
     await authorizeSettings(store, payload)
-    const base = getMergedDbConfig(store)
     const { clean } = stripToken(payload)
-    const config = clean.host !== undefined ? clean : payload
-    const testCfg = config?.host
-      ? {
-          host: config.host || base.host,
-          port: Number(config.port ?? base.port ?? 3306),
-          user: config.user || base.user,
-          password:
-            config.password === undefined ||
-            config.password === null ||
-            String(config.password).trim() === ''
-              ? base.password
-              : String(config.password),
-          database: config.database || base.database,
-        }
-      : base
-
-    if (!isDbConfigComplete(testCfg)) {
-      throw new Error('Incomplete database configuration')
+    const config = clean.url !== undefined ? clean : payload
+    const prev = getSupabaseConfig(store) || {}
+    const url = String(config.url || prev.url || '').trim()
+    const dbPassword =
+      config.dbPassword === undefined ||
+      config.dbPassword === null ||
+      String(config.dbPassword).trim() === ''
+        ? prev.dbPassword || ''
+        : String(config.dbPassword)
+    const projectRef = extractProjectRef(url)
+    if (!url || !dbPassword || !projectRef) {
+      throw new Error('Supabase URL and database password are required')
     }
     const knex = require('knex')({
-      client: 'mysql2',
+      client: 'pg',
       connection: {
-        host: testCfg.host,
-        port: Number(testCfg.port || 3306),
-        user: testCfg.user,
-        password: testCfg.password ?? '',
-        database: testCfg.database,
-        timezone: 'Z',
+        host: `db.${projectRef}.supabase.co`,
+        port: 5432,
+        user: 'postgres',
+        password: dbPassword,
+        database: 'postgres',
+        ssl: { rejectUnauthorized: false },
       },
     })
     try {
@@ -98,6 +90,14 @@ module.exports = function registerSettingsIpc(ipcMain, store) {
       await knex.destroy().catch(() => {})
       throw err
     }
+  })
+
+  ipcMain.handle('settings:saveDb', async () => {
+    throw new Error('MySQL setup is no longer supported. Use Supabase settings instead.')
+  })
+
+  ipcMain.handle('settings:testDb', async () => {
+    throw new Error('MySQL setup is no longer supported. Use Supabase settings instead.')
   })
 
   ipcMain.handle('settings:getDevices', async (_e, payload) => {
@@ -117,5 +117,24 @@ module.exports = function registerSettingsIpc(ipcMain, store) {
     if (!Array.isArray(devices)) throw new Error('devices must be an array')
     store.set('zkteco_devices', devices)
     return { ok: true }
+  })
+
+  ipcMain.handle('settings:getAutoLaunch', async (_e, payload) => {
+    await authorizeSettings(store, payload)
+    return {
+      ...getAutoLaunchSettings(store),
+      appRole: store.get('app_role', null),
+    }
+  })
+
+  ipcMain.handle('settings:saveAutoLaunch', async (_e, payload) => {
+    await authorizeSettings(store, payload)
+    const { clean } = stripToken(payload)
+    const patch = clean.enabled !== undefined ? clean : payload
+    return saveAutoLaunchSettings(store, {
+      enabled: patch.enabled,
+      startMinimized: patch.startMinimized,
+      runInBackground: patch.runInBackground,
+    })
   })
 }

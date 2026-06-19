@@ -1,4 +1,5 @@
 const { authorize } = require('../lib/authGuard.cjs')
+const { insertReturningId } = require('../db/dialect.cjs')
 
 async function assertUniqueDepartmentName(knex, name, excludeId = null) {
   let query = knex('departments').where({ name: String(name).trim() })
@@ -40,11 +41,9 @@ module.exports = function registerDepartmentsIpc(ipcMain, store) {
     const code = auth.clean.code ? String(auth.clean.code).trim() : null
     await assertUniqueDepartmentName(auth.knex, name)
     await assertUniqueDepartmentCode(auth.knex, code)
-    const [id] = await auth.knex('departments').insert({
+    const id = await insertReturningId(auth.knex, 'departments', {
       name,
       code,
-      created_at: new Date(),
-      updated_at: new Date(),
     })
     return { id }
   })

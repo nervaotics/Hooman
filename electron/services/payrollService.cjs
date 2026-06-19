@@ -1,3 +1,4 @@
+const { insertReturningId } = require('../db/dialect.cjs')
 const { buildPayrollUpsertPayload } = require('../lib/payrollPayloadBuilder.cjs')
 const { fetchAttendanceForPeriod } = require('./dailyAttendanceRollup.cjs')
 const { getPayrollPeriod21stTo20th } = require('../lib/payrollWorkCycle.cjs')
@@ -152,7 +153,7 @@ async function createPeriod(knex, data, userId) {
     throw new Error('Please fill in period name and all dates.')
   }
 
-  const [id] = await knex('payroll_periods').insert({
+  const id = await insertReturningId(knex, 'payroll_periods', {
     period_name: String(data.period_name || '').trim(),
     period_month: Number(data.period_month),
     period_year: Number(data.period_year),
@@ -161,8 +162,6 @@ async function createPeriod(knex, data, userId) {
     payroll_date,
     status: 'Draft',
     created_by: userId || null,
-    created_at: new Date(),
-    updated_at: new Date(),
   })
   return getPeriod(knex, id)
 }
@@ -224,11 +223,7 @@ async function upsertRecord(knex, payload) {
     return existing.id
   }
 
-  const [id] = await knex('payroll_records').insert({
-    ...payload,
-    created_at: now,
-    updated_at: now,
-  })
+  const id = await insertReturningId(knex, 'payroll_records', payload)
   return id
 }
 

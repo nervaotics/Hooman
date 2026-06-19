@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { toastError } from '@/lib/notify.js'
 import { toast } from 'sonner'
 import { KNOWN_POOLS } from '@/lib/constants.js'
+import { useAppRole } from '@/hooks/useAppRole.js'
 
 export default function DeviceSettings() {
+  const { isServer, loading: roleLoading } = useAppRole()
   const [devices, setDevices] = useState([])
   const [busy, setBusy] = useState(false)
 
@@ -38,6 +41,14 @@ export default function DeviceSettings() {
     setDevices((prev) =>
       prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)),
     )
+  }
+
+  if (roleLoading) {
+    return <p className="text-sm text-muted">Loading…</p>
+  }
+
+  if (!isServer) {
+    return <Navigate to="/settings" replace />
   }
 
   return (

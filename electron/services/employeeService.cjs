@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { insertReturningId } = require('../db/dialect.cjs')
 const { getNextEmployeeCode } = require('../lib/employeeCodes.cjs')
 const { normalizePhotoUrl, photoUrlFromFileName, getPhotoDir } = require('../photoProtocol.cjs')
 
@@ -45,6 +46,7 @@ function buildEmployeePayload(form) {
     cnic_number: form.cnic_number || null,
     cnic_issue_date: empty(form.cnic_issue_date) ? null : form.cnic_issue_date,
     cnic_expiry_date: empty(form.cnic_expiry_date) ? null : form.cnic_expiry_date,
+    eobi_number: empty(form.eobi_number) ? null : String(form.eobi_number).trim(),
     phone: form.phone_number || null,
     phone_number: form.phone_number || null,
     emergency_contact: empty(form.emergency_contact) ? null : form.emergency_contact,
@@ -295,7 +297,7 @@ async function createEmployeeFull(knex, payload) {
     created_at: new Date(),
   }
 
-  const [id] = await knex('employees').insert(employeeRow)
+  const id = await insertReturningId(knex, 'employees', employeeRow)
   await persistHistory(knex, id, employment_history, false)
   await persistPosting(knex, id, form, false)
   await persistSalary(knex, id, salaryForm)

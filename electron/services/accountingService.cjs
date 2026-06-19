@@ -1,3 +1,5 @@
+const { insertReturningId } = require('../db/dialect.cjs')
+
 const ACCOUNT_TYPES = ['asset', 'liability', 'equity', 'income', 'expense']
 const VOUCHER_TYPES = ['RV', 'PV', 'JV', 'PC']
 const DEBIT_NORMAL = new Set(['asset', 'expense'])
@@ -159,7 +161,7 @@ async function createAccount(knex, data) {
   const exists = await knex('coa_accounts').where({ code }).first()
   if (exists) throw new Error(`Account code "${code}" already exists`)
 
-  const [id] = await knex('coa_accounts').insert({
+  const id = await insertReturningId(knex, 'coa_accounts', {
     code,
     name,
     account_type: data.account_type,
@@ -167,8 +169,6 @@ async function createAccount(knex, data) {
     is_active: data.is_active !== false,
     opening_balance: round2(data.opening_balance),
     description: data.description ? String(data.description).trim() : null,
-    created_at: new Date(),
-    updated_at: new Date(),
   })
 
   return getAccount(knex, id)
@@ -277,15 +277,13 @@ async function createVoucher(knex, data, userId) {
   const voucherNo = await nextVoucherNo(knex, data.voucher_type, voucherDate)
 
   return knex.transaction(async (trx) => {
-    const [voucherId] = await trx('journal_vouchers').insert({
+    const voucherId = await insertReturningId(trx, 'journal_vouchers', {
       voucher_no: voucherNo,
       voucher_type: data.voucher_type,
       voucher_date: voucherDate,
       narration: data.narration ? String(data.narration).trim() : null,
       status: 'posted',
       created_by: userId || null,
-      created_at: new Date(),
-      updated_at: new Date(),
     })
 
     await trx('journal_entries').insert(

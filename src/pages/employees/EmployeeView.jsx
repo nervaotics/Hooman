@@ -119,6 +119,7 @@ export default function EmployeeView() {
         <h2 className="mb-3 font-semibold text-foreground">CNIC & contact</h2>
         <dl>
           <Row label="CNIC" value={emp.cnic_number || emp.cnic} />
+          <Row label="EOBI no." value={emp.eobi_number} />
           <Row label="CNIC issue" value={fmtDate(emp.cnic_issue_date)} />
           <Row label="CNIC expiry" value={fmtDate(emp.cnic_expiry_date)} />
           <Row label="Phone" value={emp.phone_number || emp.phone} />

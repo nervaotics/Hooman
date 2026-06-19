@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs')
+const { insertReturningId, isPostgres } = require('../db/dialect.cjs')
 const { validatePermissionsInput, isSuperAdmin } = require('../lib/permissions.cjs')
 const { serializeUser } = require('../lib/authGuard.cjs')
 
@@ -56,14 +57,12 @@ async function createUser(knex, actorId, payload) {
   }
 
   const password_hash = await bcrypt.hash(String(payload.password), BCRYPT_ROUNDS)
-  const [id] = await knex('users').insert({
+  const id = await insertReturningId(knex, 'users', {
     username,
     password_hash,
     role: 'staff',
-    permissions: JSON.stringify(permissions),
+    permissions: isPostgres(knex) ? permissions : JSON.stringify(permissions),
     is_active: true,
-    created_at: new Date(),
-    updated_at: new Date(),
   })
 
   const row = await knex('users').where({ id }).first()
@@ -94,7 +93,9 @@ async function updateUser(knex, actorId, userId, payload) {
     if (isSuperAdmin(target)) {
       throw new Error('Super administrator permissions cannot be edited')
     }
-    patch.permissions = JSON.stringify(validatePermissionsInput(payload.permissions))
+    patch.permissions = isPostgres(knex)
+      ? validatePermissionsInput(payload.permissions)
+      : JSON.stringify(validatePermissionsInput(payload.permissions))
   }
 
   if (payload.is_active !== undefined) {

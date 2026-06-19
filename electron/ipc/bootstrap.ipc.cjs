@@ -5,6 +5,8 @@ const {
   pingDatabase,
   getOrCreateKnex,
   ensureMigrations,
+  getSupabaseConfig,
+  isSupabaseConfigured,
 } = require('../db/connection.cjs')
 
 /**
@@ -13,35 +15,39 @@ const {
  */
 module.exports = function registerBootstrapIpc(ipcMain, store) {
   ipcMain.handle('bootstrap:status', async () => {
-    const savedDb = store.get('db_config', null)
-    const hasSavedDbConfig = Boolean(
-      savedDb?.host && savedDb?.database && savedDb?.user !== undefined && savedDb?.user !== null,
-    )
     let appRole = store.get('app_role', null)
-    const merged = getMergedDbConfig(store)
-    const hasDbConfig = isDbConfigComplete(merged)
-
-    if (!appRole && hasSavedDbConfig) {
-      const host = String(merged.host || '').toLowerCase()
-      appRole = host === '127.0.0.1' || host === 'localhost' ? 'server' : 'client'
-      store.set('app_role', appRole)
+    let supabase = null
+    try {
+      supabase = getSupabaseConfig(store)
+    } catch (err) {
+      return {
+        appRole,
+        needsRoleSetup: !appRole,
+        hasDbConfig: false,
+        dbReachable: false,
+        hasUsers: false,
+        needsAdminSetup: false,
+        needsDatabaseSetup: true,
+        provider: 'supabase',
+        error: toUserMessage(err, 'Saved Supabase credentials could not be read. Set them up again.'),
+      }
     }
+    const hasSupabase = isSupabaseConfigured(supabase)
+    const merged = getMergedDbConfig(store)
+    const hasDbConfig = hasSupabase || isDbConfigComplete(merged)
 
-    const needsRoleSetup = !appRole && !hasSavedDbConfig
-    const inferredRole =
-      appRole ||
-      (String(merged.host || '').startsWith('127.') || merged.host === 'localhost'
-        ? 'server'
-        : 'client')
+    const needsRoleSetup = !appRole
+
     if (!hasDbConfig) {
       return {
-        appRole: inferredRole,
+        appRole,
         needsRoleSetup,
         hasDbConfig: false,
         dbReachable: false,
         hasUsers: false,
         needsAdminSetup: false,
         needsDatabaseSetup: true,
+        provider: 'supabase',
       }
     }
 
@@ -49,14 +55,15 @@ module.exports = function registerBootstrapIpc(ipcMain, store) {
       await pingDatabase(store)
     } catch (err) {
       return {
-        appRole: inferredRole,
+        appRole,
         needsRoleSetup,
         hasDbConfig: true,
         dbReachable: false,
         hasUsers: false,
         needsAdminSetup: false,
         needsDatabaseSetup: false,
-        error: toUserMessage(err, 'Cannot connect to the database.'),
+        provider: hasSupabase ? 'supabase' : 'legacy',
+        error: toUserMessage(err, 'Cannot connect to Supabase.'),
       }
     }
 
@@ -64,13 +71,14 @@ module.exports = function registerBootstrapIpc(ipcMain, store) {
       await ensureMigrations(store)
     } catch (err) {
       return {
-        appRole: inferredRole,
+        appRole,
         needsRoleSetup,
         hasDbConfig: true,
         dbReachable: true,
         hasUsers: false,
         needsAdminSetup: false,
         needsDatabaseSetup: false,
+        provider: hasSupabase ? 'supabase' : 'legacy',
         migrationError: toUserMessage(err, 'Could not update the database schema.'),
       }
     }
@@ -79,13 +87,14 @@ module.exports = function registerBootstrapIpc(ipcMain, store) {
     const row = await knex('users').count('* as cnt').first()
     const cnt = Number(row?.cnt ?? 0)
     return {
-      appRole: inferredRole,
+      appRole,
       needsRoleSetup,
       hasDbConfig: true,
       dbReachable: true,
       hasUsers: cnt > 0,
       needsAdminSetup: cnt === 0,
       needsDatabaseSetup: false,
+      provider: hasSupabase ? 'supabase' : 'legacy',
     }
   })
 }

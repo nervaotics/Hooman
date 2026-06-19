@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Calendar, RefreshCw, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { toastError } from '@/lib/notify.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { canWrite } from '@/lib/permissions.js'
+import { useAppRole } from '@/hooks/useAppRole.js'
 
 function todayLocal() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi' }).format(new Date())
 }
 
+const LIVE_REFRESH_MS = 120_000
+
 export default function AttendancePage() {
   const user = useAuthStore((s) => s.user)
-  const canSync = canWrite(user, 'employee_data')
+  const { isServer } = useAppRole()
+  const canSync = isServer && canWrite(user, 'employee_data')
   const today = todayLocal()
   const [viewMode, setViewMode] = useState('daily')
   const [date, setDate] = useState(today)
@@ -25,6 +29,13 @@ export default function AttendancePage() {
   const [timezone, setTimezone] = useState('Asia/Karachi')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null)
+  const [liveRefreshing, setLiveRefreshing] = useState(false)
+
+  const isViewingToday = useMemo(() => {
+    if (viewMode === 'daily') return date === today
+    return syncFrom <= today && syncTo >= today
+  }, [viewMode, date, today, syncFrom, syncTo])
 
   const loadDaily = useCallback(async () => {
     const result = await window.electron.getDailyAttendance({ date, search })
@@ -43,28 +54,61 @@ export default function AttendancePage() {
     setTimezone(result.timezone || 'Asia/Karachi')
   }, [syncFrom, syncTo, search])
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
+    else setLiveRefreshing(true)
     try {
       if (viewMode === 'daily') {
         await loadDaily()
       } else {
         await loadPunchLog()
       }
+      setLastRefreshedAt(new Date())
     } catch (e) {
-      toastError(e, 'Could not load attendance.')
-      setRows([])
-      setPunchRows([])
-      setPunchMeta({ total: 0, unlinked: 0 })
+      if (!silent) {
+        toastError(e, 'Could not load attendance.')
+        setRows([])
+        setPunchRows([])
+        setPunchMeta({ total: 0, unlinked: 0 })
+      }
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
+      else setLiveRefreshing(false)
     }
   }, [viewMode, loadDaily, loadPunchLog])
 
   useEffect(() => {
-    const t = setTimeout(load, 200)
+    const t = setTimeout(() => load(), 200)
     return () => clearTimeout(t)
   }, [load])
+
+  useEffect(() => {
+    if (!isViewingToday) return undefined
+
+    const intervalId = setInterval(() => {
+      load({ silent: true })
+    }, LIVE_REFRESH_MS)
+
+    return () => clearInterval(intervalId)
+  }, [isViewingToday, load])
+
+  useEffect(() => {
+    if (!window.electron?.onAttendanceSynced) return undefined
+    const unsub = window.electron.onAttendanceSynced(() => {
+      if (isViewingToday) load({ silent: true })
+    })
+    return () => unsub?.()
+  }, [isViewingToday, load])
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && isViewingToday) {
+        load({ silent: true })
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [isViewingToday, load])
 
   const handleSync = async () => {
     if (!syncAllOnDevice && (!syncFrom || !syncTo)) {
@@ -124,6 +168,11 @@ export default function AttendancePage() {
           <h1 className="text-2xl font-semibold text-foreground">Attendance</h1>
           <p className="mt-1 text-sm text-muted">
             ZKTeco punches and daily check-in/out ({timezone})
+            {isViewingToday ? (
+              <span className="ml-2 text-xs text-accent">
+                {liveRefreshing ? '· Updating…' : '· Live for today'}
+              </span>
+            ) : null}
           </p>
         </div>
         <div className="flex rounded-md border border-border p-0.5 text-sm">
@@ -144,11 +193,12 @@ export default function AttendancePage() {
         </div>
       </div>
 
+      {isServer ? (
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Manual sync from devices</h2>
         <p className="mt-1 text-xs text-muted">
           Pull punches for a date range, then view them in Punch log. Auto-sync every 5 minutes
-          still runs in the background on the Server PC.
+          still runs in the background on this Server PC.
         </p>
 
         <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -193,6 +243,12 @@ export default function AttendancePage() {
           </button>
         </div>
       </div>
+      ) : (
+        <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted">
+          Attendance is synced automatically by the Server PC. This workstation reads live data from
+          Supabase.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         {viewMode === 'daily' ? (
@@ -305,6 +361,11 @@ export default function AttendancePage() {
         <p className="text-xs text-muted">
           {rows.length} employee{rows.length === 1 ? '' : 's'} with punches on {date}. Check_In and
           Check_Out use first and last punch of the day.
+          {lastRefreshedAt ? (
+            <span className="ml-1">
+              Updated {lastRefreshedAt.toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi' })}.
+            </span>
+          ) : null}
         </p>
       ) : null}
 
@@ -314,6 +375,11 @@ export default function AttendancePage() {
           {punchMeta.unlinked > 0
             ? ` ${punchMeta.unlinked} not linked to an employee — set punch_code to match the device user ID (highlighted rows).`
             : ' All punches are linked to employees.'}
+          {lastRefreshedAt ? (
+            <span className="ml-1">
+              Updated {lastRefreshedAt.toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi' })}.
+            </span>
+          ) : null}
         </p>
       ) : null}
 

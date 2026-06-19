@@ -7,10 +7,12 @@ directories:
 
 asarUnpack:
   - electron/db/migrations/**
+  - supabase/migrations/**
 
 files:
   - dist/**/*
   - electron/**/*
+  - supabase/**/*
   - package.json
 
 extraMetadata:

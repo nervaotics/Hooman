@@ -1,5 +1,6 @@
 const { authorize } = require('../lib/authGuard.cjs')
 const payrollService = require('../services/payrollService.cjs')
+const payrollExportService = require('../services/payrollExportService.cjs')
 
 /**
  * @param {import('electron').IpcMain} ipcMain
@@ -93,5 +94,12 @@ module.exports = function registerPayrollIpc(ipcMain, store) {
   ipcMain.handle('payroll:history', async (_e, payload) => {
     const auth = await authorize(store, payload, { module: 'payroll_processing', level: 'read' })
     return payrollService.listPeriods(auth.knex)
+  })
+
+  ipcMain.handle('payroll:exportStatutory', async (_e, payload) => {
+    const auth = await authorize(store, payload, { module: 'payroll_processing', level: 'read' })
+    if (!auth.clean.periodId) throw new Error('periodId required')
+    const format = auth.clean.format
+    return payrollExportService.exportStatutoryCsv(auth.knex, auth.clean.periodId, format)
   })
 }

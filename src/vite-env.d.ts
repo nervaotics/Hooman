@@ -27,9 +27,22 @@ interface ElectronApi {
     error?: string
     migrationError?: string
   }>
-  getSetupState: () => Promise<Record<string, unknown>>
-  setupAsServer: () => Promise<Record<string, unknown>>
+  getSetupState: () => Promise<{ appRole?: string; hasSupabase?: boolean; supabaseUrl?: string }>
+  getAutoLaunchSettings: () => Promise<{
+    enabled: boolean
+    startMinimized: boolean
+    runInBackground: boolean
+    appRole?: string | null
+  }>
+  saveAutoLaunchSettings: (payload: Record<string, unknown>) => Promise<{
+    enabled: boolean
+    startMinimized: boolean
+    runInBackground: boolean
+  }>
+  setupAsServer: (payload?: Record<string, unknown>) => Promise<Record<string, unknown>>
   setupAsClient: (payload?: Record<string, unknown>) => Promise<Record<string, unknown>>
+  testSupabaseConnection: (payload?: Record<string, unknown>) => Promise<{ ok: boolean }>
+  saveSupabaseConfig: (payload?: Record<string, unknown>) => Promise<{ ok: boolean }>
   testServerConnection: (payload?: Record<string, unknown>) => Promise<Record<string, unknown>>
 
   login: (credentials: { username: string; password: string }) => Promise<{
@@ -122,6 +135,10 @@ interface ElectronApi {
     employeeIds: number[],
   ) => Promise<{ rows: unknown[] }>
   getPayrollHistory: () => Promise<unknown[]>
+  exportPayrollStatutory: (
+    periodId: number,
+    format: 'sessi' | 'eobi',
+  ) => Promise<{ csv: string; filename: string; rowCount: number }>
 
   getAccountingMeta: () => Promise<{
     accountTypes: string[]
@@ -152,8 +169,13 @@ interface ElectronApi {
   getApplicants: (jobId: number) => Promise<Record<string, unknown>>
   updateApplicantStatus: (id: number, status: string) => Promise<Record<string, unknown>>
 
-  getDbConfig: () => Promise<{ merged: Record<string, unknown>; saved: unknown }>
+  getDbConfig: () => Promise<{
+    merged: Record<string, unknown>
+    supabase?: Record<string, unknown> | null
+  }>
   saveDbConfig: (config: Record<string, unknown>) => Promise<{ ok: boolean }>
+  saveSupabaseSettings: (config: Record<string, unknown>) => Promise<{ ok: boolean }>
+  testSupabaseSettings: (config: Record<string, unknown>) => Promise<{ ok: boolean }>
   getDevices: () => Promise<unknown[]>
   saveDevices: (devices: unknown[]) => Promise<{ ok: boolean }>
   testDbConnection: (config: Record<string, unknown>) => Promise<{ ok: boolean }>
@@ -165,6 +187,7 @@ interface ElectronApi {
 
   onUpdateReady: (cb: () => void) => () => void
   onUpdateStatus: (cb: (payload: Record<string, unknown>) => void) => () => void
+  onAttendanceSynced: (cb: (payload: Record<string, unknown>) => void) => () => void
   getUpdaterSettings: () => Promise<Record<string, unknown>>
   saveUpdaterSettings: (payload: Record<string, unknown>) => Promise<Record<string, unknown>>
   checkUpdatesNow: () => Promise<Record<string, unknown>>

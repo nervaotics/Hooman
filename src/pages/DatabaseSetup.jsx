@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { formatUserError } from '@/lib/userMessage.js'
 import { isElectron } from '@/lib/electron.js'
 import PasswordInput from '@/components/PasswordInput.jsx'
 
 export default function DatabaseSetup() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const role = location.state?.role || null
   const inDesktop = isElectron()
   const [form, setForm] = useState({
-    host: '127.0.0.1',
-    port: 3306,
-    user: 'root',
-    password: '',
-    database: 'hooman_hrm',
-    passwordIsSet: false,
+    url: '',
+    dbPassword: '',
+    anonKey: '',
+    serviceRoleKey: '',
+    dbPasswordIsSet: false,
+    anonKeyIsSet: false,
+    serviceRoleKeyIsSet: false,
   })
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -24,19 +27,19 @@ export default function DatabaseSetup() {
     ;(async () => {
       try {
         const cfg = await window.electron.getDbConfig()
-        const m = cfg?.merged || {}
+        const sb = cfg?.supabase
         if (cancelled) return
-        setForm((f) => ({
-          ...f,
-          host: String(m.host ?? f.host),
-          port: Number(m.port ?? f.port),
-          user: String(m.user ?? f.user),
-          password: '',
-          database: String(m.database ?? f.database),
-          passwordIsSet: Boolean(m.passwordIsSet),
-        }))
+        if (sb) {
+          setForm((f) => ({
+            ...f,
+            url: String(sb.url ?? f.url),
+            dbPasswordIsSet: Boolean(sb.dbPasswordIsSet),
+            anonKeyIsSet: Boolean(sb.anonKeyIsSet),
+            serviceRoleKeyIsSet: Boolean(sb.serviceRoleKeyIsSet),
+          }))
+        }
       } catch {
-        /* ignore — wizard still usable */
+        /* ignore */
       }
     })()
     return () => {
@@ -46,21 +49,25 @@ export default function DatabaseSetup() {
 
   const onChange = (e) => {
     const { name, value } = e.target
-    setForm((f) => ({
-      ...f,
-      [name]: name === 'port' ? Number(value) || 0 : value,
-    }))
+    setForm((f) => ({ ...f, [name]: value }))
   }
+
+  const payload = () => ({
+    url: form.url.trim(),
+    dbPassword: form.dbPassword.trim() || undefined,
+    anonKey: form.anonKey.trim() || undefined,
+    serviceRoleKey: form.serviceRoleKey.trim() || undefined,
+  })
 
   const test = async () => {
     if (!window.electron) return
     setBusy(true)
     setMessage('')
     try {
-      await window.electron.testDbConnection(form)
+      await window.electron.testSupabaseConnection(payload())
       setMessage('Connection OK')
     } catch (e) {
-      setMessage(formatUserError(e, 'Could not connect to the database.'))
+      setMessage(formatUserError(e, 'Could not connect to Supabase.'))
     } finally {
       setBusy(false)
     }
@@ -71,89 +78,93 @@ export default function DatabaseSetup() {
     setBusy(true)
     setMessage('')
     try {
-      await window.electron.saveDbConfig(form)
+      const data = payload()
+      if (role === 'server') {
+        await window.electron.setupAsServer(data)
+      } else if (role === 'client') {
+        await window.electron.setupAsClient(data)
+      } else {
+        await window.electron.saveSupabaseConfig(data)
+      }
       const boot = await window.electron.bootstrapStatus()
       if (boot.needsAdminSetup) navigate('/setup/admin', { replace: true })
       else navigate('/login', { replace: true })
     } catch (e) {
-      setMessage(formatUserError(e, 'Could not save database settings.'))
+      setMessage(formatUserError(e, 'Could not save Supabase settings.'))
     } finally {
       setBusy(false)
     }
   }
 
+  const title =
+    role === 'server'
+      ? 'Connect Supabase (Server PC)'
+      : role === 'client'
+        ? 'Connect Supabase (Client PC)'
+        : 'Connect Supabase'
+
   return (
     <div className="rounded-xl border border-border bg-card p-6 shadow-xl">
-      <h1 className="text-xl font-semibold text-foreground">Connect database</h1>
+      <h1 className="text-xl font-semibold text-foreground">{title}</h1>
 
       {!inDesktop ? (
         <div className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">
           <p className="font-medium">Use the Hooman desktop window — not the browser.</p>
-          <p className="mt-2 text-muted">
-            You opened <code className="text-foreground">localhost:5173</code> in a browser.
-            Hooman only works inside Electron. Stop this tab, run{' '}
-            <code className="text-foreground">npm run dev</code> in the project folder, and use
-            the <strong>Hooman</strong> window that opens automatically.
-          </p>
         </div>
       ) : null}
 
       <p className="mt-2 text-sm text-muted">
-        Point every Hooman workstation at your central MySQL server. Values here
-        override <span className="text-foreground">.env</span> on this machine.
+        {role === 'server'
+          ? 'This PC polls ZKTeco devices and syncs attendance to Supabase. Use your project URL and database password from the Supabase dashboard (Settings → Database).'
+          : 'All HRM data is stored in Supabase. Enter your project URL and database password — no LAN server IP needed.'}
       </p>
 
       <div className="mt-6 grid gap-3">
         <label className="grid gap-1 text-sm">
-          <span className="text-muted">Host</span>
+          <span className="text-muted">Project URL</span>
           <input
-            name="host"
-            value={form.host}
+            name="url"
+            value={form.url}
             onChange={onChange}
+            placeholder="https://your-project.supabase.co"
             className="rounded-md border border-border bg-sidebar px-3 py-2 text-foreground outline-none focus:border-accent"
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-muted">Port</span>
-          <input
-            name="port"
-            type="number"
-            value={form.port}
-            onChange={onChange}
-            className="rounded-md border border-border bg-sidebar px-3 py-2 text-foreground outline-none focus:border-accent"
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="text-muted">User</span>
-          <input
-            name="user"
-            value={form.user}
-            onChange={onChange}
-            className="rounded-md border border-border bg-sidebar px-3 py-2 text-foreground outline-none focus:border-accent"
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="text-muted">Password</span>
+          <span className="text-muted">Database password</span>
           <PasswordInput
-            name="password"
-            value={form.password}
+            name="dbPassword"
+            value={form.dbPassword}
             onChange={onChange}
             placeholder={
-              form.passwordIsSet
-                ? 'Leave blank to keep the saved password'
-                : 'Optional for local dev'
+              form.dbPasswordIsSet
+                ? 'Leave blank to keep saved password'
+                : 'From Supabase → Settings → Database'
             }
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-muted">Database</span>
-          <input
-            name="database"
-            value={form.database}
+          <span className="text-muted">Anon key (optional — for Realtime)</span>
+          <PasswordInput
+            name="anonKey"
+            value={form.anonKey}
             onChange={onChange}
-            className="rounded-md border border-border bg-sidebar px-3 py-2 text-foreground outline-none focus:border-accent"
+            placeholder={form.anonKeyIsSet ? 'Leave blank to keep saved key' : 'Settings → API → anon public'}
           />
         </label>
+        {role === 'server' ? (
+          <label className="grid gap-1 text-sm">
+            <span className="text-muted">Service role key (optional — Realtime on server)</span>
+            <PasswordInput
+              name="serviceRoleKey"
+              value={form.serviceRoleKey}
+              onChange={onChange}
+              placeholder={
+                form.serviceRoleKeyIsSet ? 'Leave blank to keep saved key' : 'Settings → API → service_role'
+              }
+            />
+          </label>
+        ) : null}
       </div>
 
       {message ? (
@@ -163,20 +174,10 @@ export default function DatabaseSetup() {
       ) : null}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={test}
-          className="btn-secondary disabled:opacity-50"
-        >
+        <button type="button" disabled={busy} onClick={test} className="btn-secondary disabled:opacity-50">
           Test connection
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={save}
-          className="btn-primary"
-        >
+        <button type="button" disabled={busy} onClick={save} className="btn-primary">
           Save & continue
         </button>
       </div>

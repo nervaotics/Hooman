@@ -9,6 +9,12 @@ const {
 } = require('../lib/timezone.cjs')
 const { resolveDeviceUserId, buildPunchMapFromRows, lookupEmployeeId } = require('../lib/punchMap.cjs')
 
+const { setWindowGetter, notifyAttendanceSynced } = require('../lib/attendanceSyncNotify.cjs')
+const { getOrCreateKnex, getDataProvider } = require('../db/connection.cjs')
+const { upsertAttendanceLog } = require('../db/dialect.cjs')
+const { enqueuePunch } = require('../sync/outbox.cjs')
+const { flushOutboxToDatabase } = require('../sync/syncWorker.cjs')
+
 let lastPollResults = []
 let syncChain = Promise.resolve()
 
@@ -156,21 +162,24 @@ async function pullFromDevice(device, store, options = {}, deviceIndex = 0) {
       const raw = JSON.stringify(log)
       const deviceUserId = resolveDeviceUserId(log)
       const employeeId = lookupEmployeeId(punchMap, deviceUserId)
-      const q = `
-        INSERT IGNORE INTO attendance_logs
-        (device_id, employee_device_id, employee_id, punch_time, punch_type, raw_data, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
-      `
+      const punchRow = {
+        device_id: device.id,
+        employee_device_id: deviceUserId,
+        employee_id: employeeId,
+        punch_time: punchTime,
+        punch_type: log.state ?? 0,
+        raw_data: raw,
+      }
+
+      enqueuePunch(punchRow)
+
       // eslint-disable-next-line no-await-in-loop
-      const [result] = await knex.raw(q, [
-        device.id,
-        deviceUserId,
-        employeeId,
-        punchTime,
-        log.state ?? 0,
-        raw,
-      ])
-      if (Number(result?.affectedRows ?? 0) > 0) saved += 1
+      const inserted = await upsertAttendanceLog(knex, punchRow)
+      if (inserted > 0) saved += 1
+    }
+
+    if (getDataProvider(store) === 'supabase') {
+      await flushOutboxToDatabase(store).catch(() => {})
     }
 
     return {
@@ -203,9 +212,11 @@ async function pullFromDevice(device, store, options = {}, deviceIndex = 0) {
 
 /**
  * @param {import('electron-store')} store
+ * @param {{ getWindow?: () => import('electron').BrowserWindow | null }} [options]
  */
-function start(store) {
+function start(store, options = {}) {
   const storeRef = store || new Store()
+  if (options.getWindow) setWindowGetter(options.getWindow)
 
   const runSync = () =>
     withDeviceSyncLock(async () => {
@@ -228,6 +239,11 @@ function start(store) {
       } catch (err) {
         console.warn('[Hooman] post-sync employee link failed:', err.message)
       }
+
+      notifyAttendanceSynced({
+        source: 'poller',
+        saved: results.reduce((sum, r) => sum + Number(r.savedToDatabase ?? 0), 0),
+      })
     })
 
   cron.schedule('*/5 * * * *', () => {

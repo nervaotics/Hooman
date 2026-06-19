@@ -13,6 +13,7 @@ import { formatUserError } from '@/lib/userMessage.js'
 import { canRead, isSuperAdmin } from '@/lib/permissions.js'
 import { callElectron } from '@/lib/electron.js'
 import { useAuthStore } from '@/store/authStore.js'
+import { useAppRole } from '@/hooks/useAppRole.js'
 
 function greetingForHour(hour) {
   if (hour < 5) return 'Good evening'
@@ -82,9 +83,11 @@ const emptySummary = {
 
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user)
+  const { isServer } = useAppRole()
   const showPayroll = canRead(user, 'payroll_processing')
   const showEmployees = canRead(user, 'employee_data')
   const showSettings = isSuperAdmin(user)
+  const showDevices = showSettings && isServer
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [stats, setStats] = useState(emptyStats)
@@ -287,7 +290,7 @@ export default function Dashboard() {
       </div>
       ) : null}
 
-      {showSettings ? (
+      {showDevices ? (
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="text-sm font-semibold text-foreground">Biometric devices</h2>
         <p className="mt-1 text-xs text-muted">

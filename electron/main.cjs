@@ -9,10 +9,23 @@ const {
   registerPhotoScheme,
   registerPhotoProtocol,
 } = require('./photoProtocol.cjs')
+const {
+  applyAutoLaunch,
+  isStartedHidden,
+} = require('./autoLaunch.cjs')
+const {
+  initTray,
+  attachBackgroundCloseBehavior,
+  shouldKeepProcessAlive,
+} = require('./tray.cjs')
 
 registerPhotoScheme()
 
+app.isQuitting = false
+
 const store = new Store({ name: 'hooman-config' })
+
+const { migrateSupabaseSecretsIfNeeded } = require('./db/supabaseConfig.cjs')
 
 const TITLE_BAR_OVERLAY = {
   color: '#0F1117',
@@ -28,6 +41,8 @@ function createWindow() {
     mainWindow.destroy()
   }
 
+  const launchHidden = isStartedHidden()
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -35,6 +50,7 @@ function createWindow() {
     minHeight: 700,
     title: 'Hooman',
     backgroundColor: TITLE_BAR_OVERLAY.color,
+    show: false,
     ...(process.platform === 'win32'
       ? {
           titleBarStyle: 'hidden',
@@ -46,15 +62,20 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    show: false,
   })
 
-  mainWindow.once('ready-to-show', () => mainWindow.show())
+  if (!launchHidden) {
+    mainWindow.once('ready-to-show', () => mainWindow.show())
+  }
+
+  attachBackgroundCloseBehavior(mainWindow, store)
 
   const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173'
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL(devUrl)
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
+    if (!launchHidden) {
+      mainWindow.webContents.openDevTools({ mode: 'detach' })
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
   }
@@ -99,13 +120,8 @@ app.whenReady().then(async () => {
   nativeTheme.themeSource = 'dark'
   registerPhotoProtocol()
 
-  const { ensureXamppMysql } = require('./xampp.cjs')
-  const xamppResult = await ensureXamppMysql(store)
-  if (xamppResult.started) {
-    console.log('[Hooman] XAMPP MySQL is ready')
-  } else if (xamppResult.error) {
-    console.warn('[Hooman] XAMPP auto-start:', xamppResult.error)
-  }
+  migrateSupabaseSecretsIfNeeded(store)
+  applyAutoLaunch(store)
 
   await tryMigrateOnLaunch()
 
@@ -114,6 +130,11 @@ app.whenReady().then(async () => {
 
   const win = createWindow()
   watchPreloadInDev()
+
+  await initTray({
+    getWindow: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null),
+    createWindow,
+  })
 
   require('./ipc/bootstrap.ipc.cjs')(ipcMain, store)
   require('./ipc/setup.ipc.cjs')(ipcMain, store)
@@ -136,7 +157,9 @@ app.whenReady().then(async () => {
     updater.schedulePeriodicChecks(win, store)
     return next
   })
-  ipcMain.handle('updater:checkNow', async () => updater.checkForUpdates(win, store))
+  ipcMain.handle('updater:checkNow', async () =>
+    updater.checkForUpdates(win, store, { manual: true }),
+  )
   ipcMain.handle('updater:install', async () => {
     const { autoUpdater } = require('electron-updater')
     autoUpdater.quitAndInstall(false, true)
@@ -144,8 +167,19 @@ app.whenReady().then(async () => {
   })
 
   const appRole = store.get('app_role', null)
+  const { getDataProvider } = require('./db/connection.cjs')
+
+  if (getDataProvider(store) === 'supabase') {
+    const { startSyncWorker } = require('./sync/syncWorker.cjs')
+    const { startAttendanceRealtime } = require('./data/realtime.cjs')
+    startSyncWorker(store)
+    startAttendanceRealtime(store)
+  }
+
   if (appRole !== 'client') {
-    require('./zkteco/poller.cjs').start(store)
+    require('./zkteco/poller.cjs').start(store, {
+      getWindow: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null),
+    })
   }
 
   updater.init(win, store)
@@ -156,5 +190,6 @@ app.whenReady().then(async () => {
 })
 
 app.on('window-all-closed', () => {
+  if (shouldKeepProcessAlive(store)) return
   if (process.platform !== 'darwin') app.quit()
 })

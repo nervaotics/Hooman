@@ -10,12 +10,40 @@ const DEFAULT_SETTINGS = {
 
 let checkTimer = null
 
+function parseSemver(version) {
+  const match = String(version || '')
+    .trim()
+    .replace(/^v/i, '')
+    .match(/^(\d+)\.(\d+)\.(\d+)/)
+  if (!match) return null
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+function isNewerVersion(remoteVersion, currentVersion) {
+  const remote = parseSemver(remoteVersion)
+  const current = parseSemver(currentVersion)
+  if (!remote || !current) return false
+  for (let i = 0; i < 3; i += 1) {
+    if (remote[i] > current[i]) return true
+    if (remote[i] < current[i]) return false
+  }
+  return false
+}
+
+function sendStatus(win, payload) {
+  if (win?.webContents && !win.webContents.isDestroyed()) {
+    win.webContents.send('update-status', payload)
+  }
+}
+
 function getSettings(store) {
   const saved = store.get('updater_settings', {})
   return {
     ...DEFAULT_SETTINGS,
     ...(saved || {}),
     checkIntervalMinutes: Math.max(15, Number(saved?.checkIntervalMinutes ?? 60)),
+    appVersion: app.getVersion(),
+    isPackaged: app.isPackaged,
   }
 }
 
@@ -47,6 +75,13 @@ function logUpdateCheckIssue(err) {
   console.warn('[Hooman] update check failed:', firstLine)
 }
 
+function messageForCheckError(err) {
+  if (isBenignUpdateCheckError(err)) {
+    return 'No published release found on GitHub yet. Tag and publish a new version to enable auto-update.'
+  }
+  return `Update check failed: ${String(err?.message || err).split('\n')[0]}`
+}
+
 function applyUpdaterRuntimeConfig(store) {
   const cfg = getSettings(store)
   autoUpdater.autoDownload = Boolean(cfg.autoDownload)
@@ -69,16 +104,57 @@ function schedulePeriodicChecks(win, store) {
   }, cfg.checkIntervalMinutes * 60 * 1000)
 }
 
-async function checkForUpdates(win, store) {
-  if (!app.isPackaged) return { ok: false, skipped: 'not-packaged' }
+async function checkForUpdates(win, store, { manual = false } = {}) {
+  const currentVersion = app.getVersion()
+
+  if (!app.isPackaged) {
+    const payload = {
+      ok: false,
+      skipped: true,
+      reason: 'not-packaged',
+      currentVersion,
+      latestVersion: null,
+      hasUpdate: false,
+      message:
+        'Auto-update only works in the installed app. Run npm run dev for local changes, or build and install a new release.',
+    }
+    if (manual) sendStatus(win, { phase: 'skipped', ...payload })
+    return payload
+  }
+
   applyUpdaterRuntimeConfig(store)
+  if (manual) sendStatus(win, { phase: 'checking', currentVersion })
+
   try {
     const result = await autoUpdater.checkForUpdates()
-    const hasUpdate = Boolean(result?.updateInfo?.version)
-    return { ok: true, hasUpdate, version: result?.updateInfo?.version || null }
+    const latestVersion = result?.updateInfo?.version || null
+    const hasUpdate = Boolean(latestVersion && isNewerVersion(latestVersion, currentVersion))
+    const payload = {
+      ok: true,
+      currentVersion,
+      latestVersion,
+      hasUpdate,
+      version: hasUpdate ? latestVersion : currentVersion,
+      message: hasUpdate
+        ? `Update available: v${latestVersion}`
+        : `You are on the latest version (v${currentVersion}).`,
+    }
+    if (manual) {
+      sendStatus(win, { phase: hasUpdate ? 'available' : 'not-available', ...payload })
+    }
+    return payload
   } catch (err) {
     logUpdateCheckIssue(err)
-    return { ok: true, hasUpdate: false, silent: true }
+    const payload = {
+      ok: false,
+      currentVersion,
+      latestVersion: null,
+      hasUpdate: false,
+      version: null,
+      message: messageForCheckError(err),
+    }
+    if (manual) sendStatus(win, { phase: 'error', ...payload })
+    return payload
   }
 }
 
@@ -91,8 +167,25 @@ function init(win, store) {
     applyUpdaterRuntimeConfig(store)
     autoUpdater.on('error', (err) => {
       logUpdateCheckIssue(err)
+      sendStatus(win, {
+        phase: 'error',
+        message: messageForCheckError(err),
+        currentVersion: app.getVersion(),
+      })
     })
-    autoUpdater.on('update-downloaded', () => {
+    autoUpdater.on('download-progress', (progress) => {
+      sendStatus(win, {
+        phase: 'downloading',
+        percent: Math.round(Number(progress?.percent) || 0),
+        currentVersion: app.getVersion(),
+      })
+    })
+    autoUpdater.on('update-downloaded', (info) => {
+      sendStatus(win, {
+        phase: 'downloaded',
+        latestVersion: info?.version || null,
+        currentVersion: app.getVersion(),
+      })
       win?.webContents?.send('update-ready')
     })
 

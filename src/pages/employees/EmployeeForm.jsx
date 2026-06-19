@@ -55,6 +55,7 @@ const defaultFormData = () => ({
   cnic_number: '',
   cnic_issue_date: '',
   cnic_expiry_date: '',
+  eobi_number: '',
   phone_number: '',
   punch_code: '',
   emergency_contact: '',
@@ -134,6 +135,7 @@ export default function EmployeeForm() {
           cnic_number: emp.cnic_number || emp.cnic || '',
           cnic_issue_date: emp.cnic_issue_date ? String(emp.cnic_issue_date).slice(0, 10) : '',
           cnic_expiry_date: emp.cnic_expiry_date ? String(emp.cnic_expiry_date).slice(0, 10) : '',
+          eobi_number: emp.eobi_number || '',
           phone_number: emp.phone_number || emp.phone || '',
           punch_code: emp.punch_code || '',
           emergency_contact: emp.emergency_contact || emp.emergency_contact_phone || '',
@@ -459,6 +461,9 @@ export default function EmployeeForm() {
             </Field>
             <Field label="Expiry date" htmlFor="cnic_expiry_date">
               <input type="date" id="cnic_expiry_date" name="cnic_expiry_date" value={formData.cnic_expiry_date} onChange={handleChange} min={formData.cnic_issue_date || undefined} className={inputClass()} />
+            </Field>
+            <Field label="EOBI number" htmlFor="eobi_number">
+              <input id="eobi_number" name="eobi_number" value={formData.eobi_number} onChange={handleChange} placeholder="EOBI registration no." className={inputClass()} />
             </Field>
           </div>
         </FormSection>

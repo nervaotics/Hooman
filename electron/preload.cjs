@@ -9,7 +9,7 @@ function withAuth(payload = {}) {
 
 contextBridge.exposeInMainWorld('electron', {
   /** Bump when preload API surface changes (helps detect stale Electron sessions). */
-  apiVersion: 6,
+  apiVersion: 9,
 
   customTitleBar: process.platform === 'win32',
   titleBarHeight: 36,
@@ -20,8 +20,15 @@ contextBridge.exposeInMainWorld('electron', {
 
   bootstrapStatus: () => ipcRenderer.invoke('bootstrap:status'),
   getSetupState: () => ipcRenderer.invoke('setup:getState'),
-  setupAsServer: () => ipcRenderer.invoke('setup:asServer'),
+  getAutoLaunchSettings: () => ipcRenderer.invoke('settings:getAutoLaunch', withAuth({})),
+  saveAutoLaunchSettings: (payload) =>
+    ipcRenderer.invoke('settings:saveAutoLaunch', withAuth(payload || {})),
+  setupAsServer: (payload) => ipcRenderer.invoke('setup:asServer', payload || {}),
   setupAsClient: (payload) => ipcRenderer.invoke('setup:asClient', payload || {}),
+  testSupabaseConnection: (payload) =>
+    ipcRenderer.invoke('setup:testSupabase', payload || {}),
+  saveSupabaseConfig: (payload) =>
+    ipcRenderer.invoke('setup:saveSupabase', payload || {}),
   testServerConnection: (payload) =>
     ipcRenderer.invoke('setup:testServerConnection', payload || {}),
 
@@ -102,6 +109,8 @@ contextBridge.exposeInMainWorld('electron', {
   getPayrollPeriodAttendance: (periodId, employeeIds) =>
     ipcRenderer.invoke('payroll:periodAttendance', withAuth({ periodId, employeeIds })),
   getPayrollHistory: () => ipcRenderer.invoke('payroll:history', withAuth({})),
+  exportPayrollStatutory: (periodId, format) =>
+    ipcRenderer.invoke('payroll:exportStatutory', withAuth({ periodId, format })),
 
   getAccountingMeta: () => ipcRenderer.invoke('accounting:meta', withAuth({})),
   getAccountingAccounts: (filters) =>
@@ -137,6 +146,10 @@ contextBridge.exposeInMainWorld('electron', {
 
   getDbConfig: () => ipcRenderer.invoke('settings:getDb', withAuth({})),
   saveDbConfig: (config) => ipcRenderer.invoke('settings:saveDb', withAuth(config || {})),
+  saveSupabaseSettings: (config) =>
+    ipcRenderer.invoke('settings:saveSupabase', withAuth(config || {})),
+  testSupabaseSettings: (config) =>
+    ipcRenderer.invoke('settings:testSupabase', config ? withAuth(config) : withAuth({})),
   getDevices: () => ipcRenderer.invoke('settings:getDevices', withAuth({})),
   saveDevices: (devices) =>
     ipcRenderer.invoke('settings:saveDevices', withAuth({ devices: devices || [] })),
@@ -158,6 +171,11 @@ contextBridge.exposeInMainWorld('electron', {
     const listener = (_event, payload) => cb(payload)
     ipcRenderer.on('update-status', listener)
     return () => ipcRenderer.removeListener('update-status', listener)
+  },
+  onAttendanceSynced: (cb) => {
+    const listener = (_event, payload) => cb(payload)
+    ipcRenderer.on('attendance-synced', listener)
+    return () => ipcRenderer.removeListener('attendance-synced', listener)
   },
   getUpdaterSettings: () => ipcRenderer.invoke('updater:getSettings'),
   saveUpdaterSettings: (payload) =>

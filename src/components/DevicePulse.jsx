@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export default function DevicePulse() {
+export default function DevicePulse({ collapsed = false }) {
   const [rows, setRows] = useState([])
 
   useEffect(() => {
@@ -21,6 +21,32 @@ export default function DevicePulse() {
       clearInterval(id)
     }
   }, [])
+
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-1" title="Device status">
+        {rows.length === 0 ? (
+          <span className="text-[10px] text-muted">—</span>
+        ) : (
+          rows.map((d) => (
+            <span
+              key={d.id}
+              className={
+                d.status === 'online'
+                  ? 'text-success'
+                  : d.status === 'offline'
+                    ? 'text-danger'
+                    : 'text-warning'
+              }
+              title={`${d.name}: ${d.status}${d.lastMessage ? ` — ${d.lastMessage}` : ''}`}
+            >
+              ●
+            </span>
+          ))
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2 text-xs text-muted">
@@ -45,11 +71,7 @@ export default function DevicePulse() {
                   : d.lastMessage || 'Offline or not synced yet'
               }
             >
-              {d.status === 'online'
-                ? '●'
-                : d.status === 'offline'
-                  ? '●'
-                  : '●'}
+              ●
             </span>
           </div>
         ))

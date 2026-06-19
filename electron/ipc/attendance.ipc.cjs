@@ -1,3 +1,4 @@
+const { notifyAttendanceSynced } = require('../lib/attendanceSyncNotify.cjs')
 const { authorize } = require('../lib/authGuard.cjs')
 const { DEFAULT_DEVICES } = require('../zkteco/devices.cjs')
 const { pullFromDevice, getLastPollResults, withDeviceSyncLock } = require('../zkteco/poller.cjs')
@@ -65,6 +66,7 @@ module.exports = function registerAttendanceIpc(ipcMain, store) {
         },
         { fetchedFromDevice: 0, inPeriod: 0, savedToDatabase: 0 },
       )
+      notifyAttendanceSynced({ source: 'manual', saved: totals.savedToDatabase })
       return {
         results,
         linked,

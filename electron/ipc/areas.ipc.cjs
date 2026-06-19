@@ -1,4 +1,5 @@
 const { authorize } = require('../lib/authGuard.cjs')
+const { insertReturningId } = require('../db/dialect.cjs')
 
 async function assertUniqueAreaName(knex, name, excludeId = null) {
   let query = knex('areas').where({ name: String(name).trim(), is_deleted: false })
@@ -43,12 +44,10 @@ module.exports = function registerAreasIpc(ipcMain, store) {
     const code = auth.clean.code ? String(auth.clean.code).trim() : null
     await assertUniqueAreaName(auth.knex, name)
     await assertUniqueAreaCode(auth.knex, code)
-    const [id] = await auth.knex('areas').insert({
+    const id = await insertReturningId(auth.knex, 'areas', {
       name,
       code,
       is_deleted: false,
-      created_at: new Date(),
-      updated_at: new Date(),
     })
     return { id }
   })

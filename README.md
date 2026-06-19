@@ -1,39 +1,46 @@
 # Hooman
 
-Windows desktop HRM for small LAN deployments: **Electron + React (Vite) + MySQL**, with optional **ZKTeco** attendance pulls.
+Windows desktop HRM: **Electron + React (Vite) + Supabase Postgres**, with **ZKTeco** attendance on the Server PC.
+
+## Architecture
+
+| Role | Responsibility |
+|------|----------------|
+| **Server PC** | Polls ZKTeco devices on the LAN, queues punches in a local SQLite outbox, syncs to Supabase |
+| **Client PC** | Reads/writes HRM data via Supabase — no XAMPP, no LAN database |
 
 ## Prerequisites
 
-- Node.js 20+ recommended  
-- MySQL 8+ (for example XAMPP on your central server)  
-- Database `hooman_hrm` created empty, or let migrations assume existing server user can create schema
+- Node.js 20+
+- A [Supabase](https://supabase.com) project (Postgres + optional Realtime)
+- Database password from Supabase → Settings → Database
 
 ## Quick start
 
-1. Copy `.env.example` to `.env` and set `JWT_SECRET` (and DB defaults for local dev).
-2. Ensure MySQL is reachable from this PC using the values you put in `.env`.
-3. Install dependencies (includes Electron binary download):
+1. Copy `.env.example` to `.env` and set `JWT_SECRET`.
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-If Electron fails with *"failed to install correctly"*, run:
+If Electron fails with *"failed to install correctly"*:
 
 ```bash
 npm run electron:install
 ```
 
-4. Run in development (**use the Hooman desktop window — not the browser tab**):
+3. Run in development (**use the Hooman desktop window — not the browser tab**):
 
 ```bash
 npm run dev
 ```
 
 4. On first launch:
-   - Complete **Database** setup (stored in `electron-store`, overrides `.env` on this machine).
+   - Choose **Server** or **Client** role.
+   - Connect to **Supabase** (project URL + database password).
    - Create the **first super admin** when prompted.
-   - Sign in from the login screen.
+   - Sign in.
 
 ## Scripts
 
@@ -42,73 +49,53 @@ npm run dev
 | `npm run dev` | Vite on `:5173` + Electron |
 | `npm run build` | Production Vite build (`dist/`) |
 | `npm run dist` / `npm run dist:win` | Build renderer + Windows NSIS installer |
-| `npm run migrate` | Run Knex migrations using `.env` only (CLI helper) |
+| `node scripts/migrate-mysql-to-supabase.cjs` | One-time MySQL → Supabase data migration |
 
-## Defaults you chose
+## Defaults
 
-- **App ID:** `com.hooman.desktop`  
-- **Default DB name:** `hooman_hrm`  
-- **Org timezone:** `Asia/Karachi` (store UTC in MySQL; format in UI later)  
-- **First ZKTeco device:** Ground Floor Block-22 @ `192.168.0.21:4370`  
+- **App ID:** `com.hooman.desktop`
+- **Org timezone:** `Asia/Karachi`
+- **First ZKTeco device:** Ground Floor Block-22 @ `192.168.0.21:4370`
 
-## Server PC (XAMPP)
+## Server PC (attendance edge)
 
-On the **Server PC**, Hooman auto-starts **XAMPP MySQL** when the app launches (if MySQL is not already running). It looks for XAMPP in:
+The Server PC polls biometric devices every few minutes. Punches are written to a local SQLite outbox first, then uploaded to Supabase when online.
 
-- `C:\xampp` (default)
-- `D:\xampp`, `E:\xampp`
-- or `XAMPP_ROOT` / `XAMPP_PATH` environment variable
+**After reboot:** Hooman auto-starts with Windows (enabled by default on Server setup), runs in the system tray, and keeps polling even when the main window is closed. Open **Settings → Overview** to change startup behavior.
 
-Only **MySQL** is started (not Apache). Client PCs do not start XAMPP.
+Enable Realtime on `attendance_logs` in Supabase for live UI updates on all workstations.
+
+## Migrating from MySQL / XAMPP
+
+For offices upgrading from the legacy LAN MySQL setup:
+
+1. Create a Supabase project and run the SQL in `supabase/migrations/` (or let Hooman apply schema on first connect).
+2. Export existing data:
+
+```bash
+set MYSQL_HOST=192.168.0.107
+set MYSQL_PASS=your-mysql-password
+set SUPABASE_PROJECT_REF=your-project-ref
+set SUPABASE_DB_PASSWORD=your-supabase-db-password
+node scripts/migrate-mysql-to-supabase.cjs
+```
+
+3. Configure each Hooman install with Supabase credentials (Server role on the attendance PC only).
 
 ## Auto-updates
 
-This app is configured for GitHub Releases via `electron-updater` and includes:
-
-- background update checks in packaged builds
-- silent download of updates
-- user prompt to install/restart when update is ready
-- Settings form to control update interval and behavior
-
-### Reliable release flow (recommended)
-
-To avoid unstable updates for office users, use this flow:
-
-1. Push code to `main` (CI runs lint + build only)
-2. Create a release from your machine:
-
-```bash
-npm run release:patch
-git push origin main
-git push origin v0.1.1
-```
-
-Or in one step:
-
-```bash
-npm run release:patch -- --push
-```
-
-3. GitHub Action `Build & Release` publishes installer + update metadata
-4. Installed clients fetch the new release automatically
-
-Other bump types: `npm run release:minor`, `npm run release:major`, or `node scripts/release.cjs 1.2.3`.
-
-Dry run: `node scripts/release.cjs patch --dry-run`
-
-### Required repo settings
-
-- Keep GitHub Releases enabled for this repository.
-- `GITHUB_TOKEN` is provided automatically in Actions (no extra secret needed for public/private repos you own).
+Packaged builds use `electron-updater` against GitHub Releases. See release scripts in `package.json` (`npm run release:patch`, etc.).
 
 ## Troubleshooting
 
-- **Electron window never opens:** Vite must listen on `127.0.0.1` (not only `localhost`). The dev script uses `vite --host 127.0.0.1`. After `npm run dev`, you should see both `[vite]` and `[electron]` lines in the terminal.
-- **Browser shows `testDbConnection` undefined:** Close the browser tab; use the **Hooman desktop window** only.
-- **`electron-builder` / `npm run dist` times out:** Retry on a stable connection, or run `npm run build` to verify the UI only.
+- **Electron window never opens:** Vite must listen on `127.0.0.1`. After `npm run dev`, you should see both `[vite]` and `[electron]` in the terminal.
+- **Browser shows undefined IPC methods:** Close the browser tab; use the **Hooman desktop window** only.
+- **Attendance not live:** Add Supabase anon or service role key during setup and enable Realtime replication for `attendance_logs`.
 
 ## Security notes
 
-- Never commit real `.env` secrets.  
-- Rotate `JWT_SECRET` before production use.  
-- Central MySQL should be LAN-firewalled; Hooman stores connection details per workstation.
+- Never commit real `.env` secrets.
+- Rotate `JWT_SECRET` before production use.
+- Service role key belongs on the Server PC only (Electron main process).
+- Supabase **database password and API keys** are stored in `%APPDATA%\\Hooman\\hooman-config.json` using **Windows DPAPI** (via Electron `safeStorage`). They are not plain text and cannot be edited in Notepad to change credentials. If the file is tampered with, Hooman prompts to re-enter Supabase settings.
+- Secrets are never sent to the React UI — only “password is set” flags and the project URL.
