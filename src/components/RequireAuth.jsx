@@ -16,31 +16,55 @@ export default function RequireAuth() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      restoreTokenFromDisk()
-      if (!window.electron?.bootstrapStatus) {
-        setBoot({
-          hasDbConfig: false,
-          dbReachable: false,
-          needsAdminSetup: false,
-          hasUsers: false,
-          needsDatabaseSetup: true,
-          error: 'Not running inside Electron',
-        })
-        setHydrated(true)
-        return
-      }
+      try {
+        restoreTokenFromDisk()
+        if (!window.electron?.bootstrapStatus) {
+          setBoot({
+            hasDbConfig: false,
+            dbReachable: false,
+            needsAdminSetup: false,
+            hasUsers: false,
+            needsDatabaseSetup: true,
+            error: 'Not running inside Electron',
+          })
+          setHydrated(true)
+          return
+        }
 
-      const b = await window.electron.bootstrapStatus()
-      if (cancelled) return
-      setBoot(b)
+        const b = await window.electron.bootstrapStatus()
+        if (cancelled) return
+        setBoot(b)
 
-      const token = useAuthStore.getState().token
-      if (token) {
-        const s = await window.electron.session()
-        if (s.user) applyUser(s.user)
-        else clearSession()
+        const token = useAuthStore.getState().token
+        const setupIncomplete = b.needsRoleSetup || !b.hasDbConfig || !b.dbReachable || b.migrationError
+
+        if (token && setupIncomplete) {
+          clearSession()
+          window.electron?.setAuthToken?.(null)
+        } else if (token) {
+          try {
+            const s = await window.electron.session()
+            if (s.user) applyUser(s.user)
+            else clearSession()
+          } catch {
+            clearSession()
+            window.electron?.setAuthToken?.(null)
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setBoot({
+            hasDbConfig: false,
+            dbReachable: false,
+            needsAdminSetup: false,
+            hasUsers: false,
+            needsRoleSetup: true,
+            needsDatabaseSetup: true,
+          })
+        }
+      } finally {
+        if (!cancelled) setHydrated(true)
       }
-      setHydrated(true)
     })()
     return () => {
       cancelled = true

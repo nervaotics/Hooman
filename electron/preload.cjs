@@ -9,7 +9,7 @@ function withAuth(payload = {}) {
 
 contextBridge.exposeInMainWorld('electron', {
   /** Bump when preload API surface changes (helps detect stale Electron sessions). */
-  apiVersion: 9,
+  apiVersion: 11,
 
   customTitleBar: process.platform === 'win32',
   titleBarHeight: 36,
@@ -153,6 +153,10 @@ contextBridge.exposeInMainWorld('electron', {
   getDevices: () => ipcRenderer.invoke('settings:getDevices', withAuth({})),
   saveDevices: (devices) =>
     ipcRenderer.invoke('settings:saveDevices', withAuth({ devices: devices || [] })),
+  getAttendanceSyncSettings: () =>
+    ipcRenderer.invoke('settings:getAttendanceSync', withAuth({})),
+  saveAttendanceSyncSettings: (payload) =>
+    ipcRenderer.invoke('settings:saveAttendanceSync', withAuth(payload || {})),
   testDbConnection: (config) =>
     ipcRenderer.invoke('settings:testDb', config ? withAuth(config) : {}),
 

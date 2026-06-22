@@ -1,6 +1,11 @@
 const { stripToken } = require('./ipcPayload.cjs')
 const { verifyToken } = require('./jwt.cjs')
-const { getOrCreateKnex, ensureMigrations } = require('../db/connection.cjs')
+const {
+  getOrCreateKnex,
+  ensureMigrations,
+  getMergedDbConfig,
+  isDbConfigComplete,
+} = require('../db/connection.cjs')
 const { canAccess, isSuperAdmin, permissionsForClient } = require('./permissions.cjs')
 
 function unauthorized(message = 'Your session has expired. Please sign in again.') {
@@ -68,11 +73,15 @@ async function authorize(store, payload, opts = {}) {
  * Settings during first-time setup (no users yet) skip auth.
  */
 async function authorizeSettings(store, payload) {
+  const { clean } = stripToken(payload || {})
+  if (!isDbConfigComplete(getMergedDbConfig(store))) {
+    return { knex: null, user: null, clean, setupMode: true }
+  }
+
   await ensureMigrations(store)
   const knex = getOrCreateKnex(store)
   const countRow = await knex('users').count('* as cnt').first()
   if (Number(countRow?.cnt ?? 0) === 0) {
-    const { clean } = stripToken(payload || {})
     return { knex, user: null, clean, setupMode: true }
   }
   return { ...(await authorize(store, payload, { superAdmin: true })), setupMode: false }

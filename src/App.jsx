@@ -36,88 +36,91 @@ export default function App() {
   return (
     <HashRouter>
       <AppChrome>
-      <Routes>
-        <Route path="/setup/database" element={<DatabaseSetup />} />
-        <Route element={<AuthLayout />}>
-          <Route path="/setup/role" element={<RoleSelection />} />
-          <Route path="/setup/client-ip" element={<ClientServerIP />} />
-          <Route path="/setup/admin" element={<FirstAdminSetup />} />
-          <Route path="/login" element={<Login />} />
-        </Route>
+        <Routes>
+          <Route element={<AuthLayout />}>
+            <Route path="/setup/database" element={<DatabaseSetup />} />
+            <Route path="/setup/role" element={<RoleSelection />} />
+            <Route path="/setup/client-ip" element={<ClientServerIP />} />
+            <Route path="/setup/admin" element={<FirstAdminSetup />} />
+            <Route path="/login" element={<Login />} />
+          </Route>
 
-        <Route element={<RequireAuth />}>
-          <Route element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
+          <Route element={<RequireAuth />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
 
-            <Route element={<RequireModuleAccess module="employee_data" />}>
-              <Route path="recruitment" element={
-                <ModulePlaceholder
-                  title="Recruitment"
-                  description="Job postings and applicant pipeline will connect to recruitment IPC handlers."
+              <Route element={<RequireModuleAccess module="employee_data" />}>
+                <Route
+                  path="recruitment"
+                  element={
+                    <ModulePlaceholder
+                      title="Recruitment"
+                      description="Job postings and applicant pipeline will connect to recruitment IPC handlers."
+                    />
+                  }
                 />
-              } />
-              <Route path="employees" element={<EmployeeList />} />
-              <Route path="employees/:id" element={<EmployeeView />} />
-              <Route path="attendance" element={<AttendancePage />} />
-            </Route>
-
-            <Route element={<RequireModuleAccess module="employee_data" level="write" />}>
-              <Route path="employees/new" element={<EmployeeForm />} />
-              <Route path="employees/:id/edit" element={<EmployeeForm />} />
-            </Route>
-
-            <Route element={<RequireModuleAccess module="payroll_processing" />}>
-              <Route path="payroll" element={<PayrollPage />} />
-              <Route path="payroll/processing" element={<PayrollProcessingPage />} />
-            </Route>
-
-            <Route element={<RequireModuleAccess module="accounting" />}>
-              <Route path="accounting" element={<AccountingLayout />}>
-                <Route index element={<Navigate to="accounts" replace />} />
-                <Route path="accounts" element={<ChartOfAccountsPage />} />
-                <Route path="vouchers" element={<VouchersPage />} />
-                <Route path="vouchers/new" element={<VoucherFormPage />} />
-                <Route path="vouchers/:id" element={<VoucherFormPage />} />
-                <Route path="ledger" element={<LedgerPage />} />
-                <Route path="trial-balance" element={<TrialBalancePage />} />
-                <Route path="balance-sheet" element={<BalanceSheetPage />} />
+                <Route path="employees" element={<EmployeeList />} />
+                <Route path="employees/:id" element={<EmployeeView />} />
+                <Route path="attendance" element={<AttendancePage />} />
               </Route>
-            </Route>
 
-            <Route
-              path="performance"
-              element={
-                <ModulePlaceholder title="Performance" description="KPIs and appraisals — planned." />
-              }
-            />
-            <Route
-              path="disciplinary"
-              element={
-                <ModulePlaceholder title="Disciplinary" description="Warnings and incidents — planned." />
-              }
-            />
-            <Route
-              path="offboarding"
-              element={
-                <ModulePlaceholder title="Offboarding" description="Exit checklist and settlement — planned." />
-              }
-            />
+              <Route element={<RequireModuleAccess module="employee_data" level="write" />}>
+                <Route path="employees/new" element={<EmployeeForm />} />
+                <Route path="employees/:id/edit" element={<EmployeeForm />} />
+              </Route>
 
-            <Route element={<RequireSuperAdmin />}>
-              <Route path="organization" element={<OrganizationPage />} />
-              <Route path="settings" element={<SettingsPage />}>
-                <Route index element={<SettingsOverview />} />
-                <Route path="users" element={<UserManagement />} />
-                <Route path="bulk-import" element={<EmployeeBulkImport />} />
-                <Route path="database" element={<DatabaseSettings />} />
-                <Route path="devices" element={<DeviceSettings />} />
+              <Route element={<RequireModuleAccess module="payroll_processing" />}>
+                <Route path="payroll" element={<PayrollPage />} />
+                <Route path="payroll/processing" element={<PayrollProcessingPage />} />
+              </Route>
+
+              <Route element={<RequireModuleAccess module="accounting" />}>
+                <Route path="accounting" element={<AccountingLayout />}>
+                  <Route index element={<Navigate to="accounts" replace />} />
+                  <Route path="accounts" element={<ChartOfAccountsPage />} />
+                  <Route path="vouchers" element={<VouchersPage />} />
+                  <Route path="vouchers/new" element={<VoucherFormPage />} />
+                  <Route path="vouchers/:id" element={<VoucherFormPage />} />
+                  <Route path="ledger" element={<LedgerPage />} />
+                  <Route path="trial-balance" element={<TrialBalancePage />} />
+                  <Route path="balance-sheet" element={<BalanceSheetPage />} />
+                </Route>
+              </Route>
+
+              <Route
+                path="performance"
+                element={
+                  <ModulePlaceholder title="Performance" description="KPIs and appraisals — planned." />
+                }
+              />
+              <Route
+                path="disciplinary"
+                element={
+                  <ModulePlaceholder title="Disciplinary" description="Warnings and incidents — planned." />
+                }
+              />
+              <Route
+                path="offboarding"
+                element={
+                  <ModulePlaceholder title="Offboarding" description="Exit checklist and settlement — planned." />
+                }
+              />
+
+              <Route element={<RequireSuperAdmin />}>
+                <Route path="organization" element={<OrganizationPage />} />
+                <Route path="settings" element={<SettingsPage />}>
+                  <Route index element={<SettingsOverview />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="bulk-import" element={<EmployeeBulkImport />} />
+                  <Route path="database" element={<DatabaseSettings />} />
+                  <Route path="devices" element={<DeviceSettings />} />
+                </Route>
               </Route>
             </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </AppChrome>
     </HashRouter>
   )

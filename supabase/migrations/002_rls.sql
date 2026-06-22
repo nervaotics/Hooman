@@ -12,29 +12,38 @@ ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
 
 -- Service role / postgres connection bypasses RLS.
 -- Authenticated desktop sessions use main-process postgres — same bypass.
+-- (CREATE POLICY IF NOT EXISTS requires PG 15+; use DROP + CREATE for Supabase compatibility.)
 
-CREATE POLICY IF NOT EXISTS "service_role_all_employees" ON employees
+DROP POLICY IF EXISTS "service_role_all_employees" ON employees;
+CREATE POLICY "service_role_all_employees" ON employees
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "service_role_all_attendance" ON attendance_logs
+DROP POLICY IF EXISTS "service_role_all_attendance" ON attendance_logs;
+CREATE POLICY "service_role_all_attendance" ON attendance_logs
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "service_role_all_users" ON users
+DROP POLICY IF EXISTS "service_role_all_users" ON users;
+CREATE POLICY "service_role_all_users" ON users
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "service_role_all_payroll_periods" ON payroll_periods
+DROP POLICY IF EXISTS "service_role_all_payroll_periods" ON payroll_periods;
+CREATE POLICY "service_role_all_payroll_periods" ON payroll_periods
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "service_role_all_payroll_records" ON payroll_records
+DROP POLICY IF EXISTS "service_role_all_payroll_records" ON payroll_records;
+CREATE POLICY "service_role_all_payroll_records" ON payroll_records
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "service_role_all_coa" ON coa_accounts
+DROP POLICY IF EXISTS "service_role_all_coa" ON coa_accounts;
+CREATE POLICY "service_role_all_coa" ON coa_accounts
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "service_role_all_vouchers" ON journal_vouchers
+DROP POLICY IF EXISTS "service_role_all_vouchers" ON journal_vouchers;
+CREATE POLICY "service_role_all_vouchers" ON journal_vouchers
   FOR ALL USING (true) WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "service_role_all_entries" ON journal_entries
+DROP POLICY IF EXISTS "service_role_all_entries" ON journal_entries;
+CREATE POLICY "service_role_all_entries" ON journal_entries
   FOR ALL USING (true) WITH CHECK (true);
 
 -- Realtime for attendance (Supabase dashboard: enable replication on attendance_logs if needed)

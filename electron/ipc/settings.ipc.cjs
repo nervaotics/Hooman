@@ -8,7 +8,8 @@ const {
 const {
   getSupabaseConfig,
   getSupabasePublicMeta,
-  extractProjectRef,
+  mergeSupabasePayload,
+  testPostgresConnection,
   writeSupabaseStore,
 } = require('../db/supabaseConfig.cjs')
 const { authorizeSettings } = require('../lib/authGuard.cjs')
@@ -17,6 +18,10 @@ const {
   getAutoLaunchSettings,
   saveAutoLaunchSettings,
 } = require('../autoLaunch.cjs')
+const {
+  getAttendanceSyncSettings,
+  saveAttendanceSyncSettings,
+} = require('../lib/attendanceSyncSettings.cjs')
 
 /**
  * @param {import('electron').IpcMain} ipcMain
@@ -60,36 +65,11 @@ module.exports = function registerSettingsIpc(ipcMain, store) {
     const { clean } = stripToken(payload)
     const config = clean.url !== undefined ? clean : payload
     const prev = getSupabaseConfig(store) || {}
-    const url = String(config.url || prev.url || '').trim()
-    const dbPassword =
-      config.dbPassword === undefined ||
-      config.dbPassword === null ||
-      String(config.dbPassword).trim() === ''
-        ? prev.dbPassword || ''
-        : String(config.dbPassword)
-    const projectRef = extractProjectRef(url)
-    if (!url || !dbPassword || !projectRef) {
+    const merged = mergeSupabasePayload(config, prev)
+    if (!merged.projectRef || !merged.dbPassword) {
       throw new Error('Supabase URL and database password are required')
     }
-    const knex = require('knex')({
-      client: 'pg',
-      connection: {
-        host: `db.${projectRef}.supabase.co`,
-        port: 5432,
-        user: 'postgres',
-        password: dbPassword,
-        database: 'postgres',
-        ssl: { rejectUnauthorized: false },
-      },
-    })
-    try {
-      await knex.raw('select 1 as ok')
-      await knex.destroy()
-      return { ok: true }
-    } catch (err) {
-      await knex.destroy().catch(() => {})
-      throw err
-    }
+    return testPostgresConnection(merged)
   })
 
   ipcMain.handle('settings:saveDb', async () => {
@@ -136,5 +116,17 @@ module.exports = function registerSettingsIpc(ipcMain, store) {
       startMinimized: patch.startMinimized,
       runInBackground: patch.runInBackground,
     })
+  })
+
+  ipcMain.handle('settings:getAttendanceSync', async (_e, payload) => {
+    await authorizeSettings(store, payload)
+    return getAttendanceSyncSettings(store)
+  })
+
+  ipcMain.handle('settings:saveAttendanceSync', async (_e, payload) => {
+    await authorizeSettings(store, payload)
+    const { clean } = stripToken(payload)
+    const patch = clean.pastDays !== undefined ? clean : payload
+    return saveAttendanceSyncSettings(store, { pastDays: patch.pastDays })
   })
 }

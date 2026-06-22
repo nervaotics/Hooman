@@ -197,8 +197,8 @@ export default function AttendancePage() {
       <div className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Manual sync from devices</h2>
         <p className="mt-1 text-xs text-muted">
-          Pull punches for a date range, then view them in Punch log. Auto-sync every 5 minutes
-          still runs in the background on this Server PC.
+          Pull punches for a date range, then view them in Punch log. Background sync uses the past-days
+          window from Settings → Devices. Duplicate punches are skipped automatically.
         </p>
 
         <div className="mt-4 flex flex-wrap items-end gap-3">

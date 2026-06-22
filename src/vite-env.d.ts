@@ -178,6 +178,8 @@ interface ElectronApi {
   testSupabaseSettings: (config: Record<string, unknown>) => Promise<{ ok: boolean }>
   getDevices: () => Promise<unknown[]>
   saveDevices: (devices: unknown[]) => Promise<{ ok: boolean }>
+  getAttendanceSyncSettings: () => Promise<{ pastDays: number }>
+  saveAttendanceSyncSettings: (payload: { pastDays?: number }) => Promise<{ pastDays: number }>
   testDbConnection: (config: Record<string, unknown>) => Promise<{ ok: boolean }>
 
   listUsers: () => Promise<unknown[]>

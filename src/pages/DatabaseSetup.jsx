@@ -12,12 +12,14 @@ export default function DatabaseSetup() {
   const [form, setForm] = useState({
     url: '',
     dbPassword: '',
+    dbHost: '',
     anonKey: '',
     serviceRoleKey: '',
     dbPasswordIsSet: false,
     anonKeyIsSet: false,
     serviceRoleKeyIsSet: false,
   })
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -33,10 +35,12 @@ export default function DatabaseSetup() {
           setForm((f) => ({
             ...f,
             url: String(sb.url ?? f.url),
+            dbHost: String(sb.dbHost ?? f.dbHost),
             dbPasswordIsSet: Boolean(sb.dbPasswordIsSet),
             anonKeyIsSet: Boolean(sb.anonKeyIsSet),
             serviceRoleKeyIsSet: Boolean(sb.serviceRoleKeyIsSet),
           }))
+          if (sb.dbHost) setShowAdvanced(true)
         }
       } catch {
         /* ignore */
@@ -55,6 +59,7 @@ export default function DatabaseSetup() {
   const payload = () => ({
     url: form.url.trim(),
     dbPassword: form.dbPassword.trim() || undefined,
+    dbHost: form.dbHost.trim() || undefined,
     anonKey: form.anonKey.trim() || undefined,
     serviceRoleKey: form.serviceRoleKey.trim() || undefined,
   })
@@ -115,8 +120,8 @@ export default function DatabaseSetup() {
 
       <p className="mt-2 text-sm text-muted">
         {role === 'server'
-          ? 'This PC polls ZKTeco devices and syncs attendance to Supabase. Use your project URL and database password from the Supabase dashboard (Settings → Database).'
-          : 'All HRM data is stored in Supabase. Enter your project URL and database password — no LAN server IP needed.'}
+          ? 'Use your API Project URL and database password from Supabase (Settings → API, and Settings → Database).'
+          : 'All HRM data is stored in Supabase. Enter your project URL and database password.'}
       </p>
 
       <div className="mt-6 grid gap-3">
@@ -126,9 +131,12 @@ export default function DatabaseSetup() {
             name="url"
             value={form.url}
             onChange={onChange}
-            placeholder="https://your-project.supabase.co"
+            placeholder="https://abcdefghijklmnop.supabase.co"
             className="rounded-md border border-border bg-sidebar px-3 py-2 text-foreground outline-none focus:border-accent"
           />
+          <span className="text-xs text-muted">
+            From Supabase → Settings → API → Project URL (not the dashboard link).
+          </span>
         </label>
         <label className="grid gap-1 text-sm">
           <span className="text-muted">Database password</span>
@@ -139,10 +147,36 @@ export default function DatabaseSetup() {
             placeholder={
               form.dbPasswordIsSet
                 ? 'Leave blank to keep saved password'
-                : 'From Supabase → Settings → Database'
+                : 'From Settings → Database → Database password'
             }
           />
         </label>
+
+        <button
+          type="button"
+          className="text-left text-xs text-accent hover:underline"
+          onClick={() => setShowAdvanced((v) => !v)}
+        >
+          {showAdvanced ? 'Hide' : 'Show'} advanced connection options
+        </button>
+
+        {showAdvanced ? (
+          <label className="grid gap-1 text-sm">
+            <span className="text-muted">Database host (optional)</span>
+            <input
+              name="dbHost"
+              value={form.dbHost}
+              onChange={onChange}
+              placeholder="db.your-ref.supabase.co or aws-0-….pooler.supabase.com"
+              className="rounded-md border border-border bg-sidebar px-3 py-2 text-foreground outline-none focus:border-accent"
+            />
+            <span className="text-xs text-muted">
+              Leave blank for default db.YOUR-REF.supabase.co. If test fails with “cannot find server”, paste the
+              Session pooler host from Settings → Database → Connection string (port 5432).
+            </span>
+          </label>
+        ) : null}
+
         <label className="grid gap-1 text-sm">
           <span className="text-muted">Anon key (optional — for Realtime)</span>
           <PasswordInput

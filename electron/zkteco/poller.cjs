@@ -14,6 +14,7 @@ const { getOrCreateKnex, getDataProvider } = require('../db/connection.cjs')
 const { upsertAttendanceLog } = require('../db/dialect.cjs')
 const { enqueuePunch } = require('../sync/outbox.cjs')
 const { flushOutboxToDatabase } = require('../sync/syncWorker.cjs')
+const { resolvePollerSyncOptions } = require('../lib/attendanceSyncSettings.cjs')
 
 let lastPollResults = []
 let syncChain = Promise.resolve()
@@ -222,10 +223,11 @@ function start(store, options = {}) {
     withDeviceSyncLock(async () => {
       const devices = storeRef.get('zkteco_devices', DEFAULT_DEVICES)
       const active = devices.filter((d) => d.enabled)
+      const syncOptions = resolvePollerSyncOptions(storeRef)
       const results = []
       for (let i = 0; i < active.length; i += 1) {
         // eslint-disable-next-line no-await-in-loop
-        results.push(await pullFromDevice(active[i], storeRef, {}, i))
+        results.push(await pullFromDevice(active[i], storeRef, syncOptions, i))
       }
       lastPollResults = results
 
@@ -254,7 +256,7 @@ function start(store, options = {}) {
     runSync().catch((err) => console.warn('[Hooman] initial ZKTeco sync failed:', err.message))
   }, 4000)
 
-  console.log('[Hooman] ZKTeco poller scheduled (every 5 minutes)')
+  console.log('[Hooman] ZKTeco poller scheduled (every 5 minutes, past-days window from settings)')
 }
 
 module.exports = { start, pullFromDevice, getLastPollResults, withDeviceSyncLock }

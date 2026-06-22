@@ -33,7 +33,11 @@ module.exports = function registerAuthIpc(ipcMain, store) {
   })
 
   ipcMain.handle('auth:session', async (_e, payload) => {
+    if (!isDbConfigComplete(getMergedDbConfig(store))) {
+      return { user: null }
+    }
     const { token } = stripToken(payload)
+    if (!token) return { user: null }
     await ensureMigrations(store)
     const provider = getProvider(store)
     return authRepo.session(provider, token)

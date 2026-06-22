@@ -2,7 +2,8 @@ const { checkProxyBypass } = require('../network-check.cjs')
 const {
   getSupabaseConfig,
   isSupabaseConfigured,
-  extractProjectRef,
+  mergeSupabasePayload,
+  testPostgresConnection,
   writeSupabaseStore,
 } = require('../db/supabaseConfig.cjs')
 const {
@@ -35,31 +36,14 @@ module.exports = function registerSetupIpc(ipcMain, store) {
   })
 
   ipcMain.handle('setup:testSupabase', async (_e, payload = {}) => {
-    const url = String(payload.url || '').trim()
-    const dbPassword = String(payload.dbPassword || '').trim()
-    const projectRef = extractProjectRef(url)
-    if (!url || !dbPassword || !projectRef) {
-      throw new Error('Supabase URL and database password are required')
+    const prev = getSupabaseConfig(store)
+    const merged = mergeSupabasePayload(payload, prev)
+    if (!merged.projectRef || !merged.dbPassword) {
+      throw new Error(
+        'Supabase project URL and database password are required. URL must look like https://abcdefgh.supabase.co',
+      )
     }
-    const knex = require('knex')({
-      client: 'pg',
-      connection: {
-        host: `db.${projectRef}.supabase.co`,
-        port: 5432,
-        user: 'postgres',
-        password: dbPassword,
-        database: 'postgres',
-        ssl: { rejectUnauthorized: false },
-      },
-    })
-    try {
-      await knex.raw('select 1 as ok')
-      await knex.destroy()
-      return { ok: true }
-    } catch (err) {
-      await knex.destroy().catch(() => {})
-      throw err
-    }
+    return testPostgresConnection(merged)
   })
 
   ipcMain.handle('setup:saveSupabase', async (_e, payload = {}) => {

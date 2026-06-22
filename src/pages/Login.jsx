@@ -17,18 +17,22 @@ export default function Login() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const boot = await window.electron.bootstrapStatus()
-      if (cancelled) return
-      if (boot.needsRoleSetup) {
-        navigate('/setup/role', { replace: true })
-        return
-      }
-      if (!boot.hasDbConfig || !boot.dbReachable || boot.migrationError) {
-        navigate('/setup/database', { replace: true })
-        return
-      }
-      if (boot.needsAdminSetup) {
-        navigate('/setup/admin', { replace: true })
+      try {
+        const boot = await window.electron.bootstrapStatus()
+        if (cancelled) return
+        if (boot.needsRoleSetup) {
+          navigate('/setup/role', { replace: true })
+          return
+        }
+        if (!boot.hasDbConfig || !boot.dbReachable || boot.migrationError) {
+          navigate('/setup/database', { replace: true })
+          return
+        }
+        if (boot.needsAdminSetup) {
+          navigate('/setup/admin', { replace: true })
+        }
+      } catch {
+        if (!cancelled) navigate('/setup/role', { replace: true })
       }
     })()
     return () => {
