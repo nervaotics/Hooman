@@ -5,7 +5,6 @@ import {
   RefreshCw,
   Sparkles,
   TrendingUp,
-  User,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -14,6 +13,14 @@ import { canRead, isSuperAdmin } from '@/lib/permissions.js'
 import { callElectron } from '@/lib/electron.js'
 import { useAuthStore } from '@/store/authStore.js'
 import { useAppRole } from '@/hooks/useAppRole.js'
+import {
+  AttendanceBreakdownChart,
+  AttendanceHeatmap,
+  AttendanceTrendChart,
+  DepartmentChart,
+  EmploymentTypeChart,
+  PayrollStatusChart,
+} from '@/components/dashboard/DashboardCharts.jsx'
 
 function greetingForHour(hour) {
   if (hour < 5) return 'Good evening'
@@ -30,38 +37,6 @@ function todayLine() {
     day: 'numeric',
     year: 'numeric',
   })
-}
-
-function Sparkline({ points }) {
-  if (!points?.length) {
-    return <p className="text-xs text-muted">Not enough attendance history yet.</p>
-  }
-
-  const w = 280
-  const h = 72
-  const pad = 8
-  const xs = points.map((_, i) => pad + (i * (w - pad * 2)) / Math.max(1, points.length - 1))
-  const ys = points.map((p) => pad + (1 - p.rate / 100) * (h - pad * 2))
-  const d = points
-    .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xs[i].toFixed(1)} ${ys[i].toFixed(1)}`)
-    .join(' ')
-
-  const last = points[points.length - 1]
-  const first = points[0]
-
-  return (
-    <div className="space-y-2">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full max-w-xs text-accent" role="img" aria-label="7-day attendance rate">
-        <line x1={pad} y1={h - pad} x2={w - pad} y2={h - pad} stroke="currentColor" strokeOpacity={0.15} />
-        <path d={d} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      </svg>
-      <div className="flex justify-between text-xs text-muted">
-        <span>{first.date.slice(5)}</span>
-        <span className="font-medium text-foreground">{last.rate}% today</span>
-        <span>{last.date.slice(5)}</span>
-      </div>
-    </div>
-  )
 }
 
 const emptyStats = {
@@ -92,7 +67,11 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [stats, setStats] = useState(emptyStats)
   const [attendanceSummary, setAttendanceSummary] = useState(emptySummary)
-  const [attendanceTrend, setAttendanceTrend] = useState([])
+  const [attendanceTrendDetailed, setAttendanceTrendDetailed] = useState([])
+  const [employeesByDepartment, setEmployeesByDepartment] = useState([])
+  const [employmentTypes, setEmploymentTypes] = useState([])
+  const [payrollStatus, setPayrollStatus] = useState([])
+  const [attendanceHeatmap, setAttendanceHeatmap] = useState(null)
   const [error, setError] = useState(null)
 
   const displayName = useMemo(() => {
@@ -114,6 +93,26 @@ export default function Dashboard() {
     [],
   )
 
+  const applyDashboardData = (data) => {
+    setStats(data.stats || emptyStats)
+    setAttendanceSummary(data.attendanceSummary || emptySummary)
+    setAttendanceTrendDetailed(data.attendanceTrendDetailed || data.attendanceTrend || [])
+    setEmployeesByDepartment(data.employeesByDepartment || [])
+    setEmploymentTypes(data.employmentTypes || [])
+    setPayrollStatus(data.payrollStatus || [])
+    setAttendanceHeatmap(data.attendanceHeatmap || null)
+  }
+
+  const resetDashboardData = () => {
+    setStats(emptyStats)
+    setAttendanceSummary(emptySummary)
+    setAttendanceTrendDetailed([])
+    setEmployeesByDepartment([])
+    setEmploymentTypes([])
+    setPayrollStatus([])
+    setAttendanceHeatmap(null)
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -124,16 +123,12 @@ export default function Dashboard() {
       try {
         const data = await callElectron('getDashboardStats')
         if (cancelled) return
-        setStats(data.stats || emptyStats)
-        setAttendanceSummary(data.attendanceSummary || emptySummary)
-        setAttendanceTrend(data.attendanceTrend || [])
+        applyDashboardData(data)
         setError(null)
       } catch (e) {
         if (cancelled) return
         setError(formatUserError(e, 'Could not load the dashboard.'))
-        setStats(emptyStats)
-        setAttendanceSummary(emptySummary)
-        setAttendanceTrend([])
+        resetDashboardData()
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -193,9 +188,7 @@ export default function Dashboard() {
             setRefreshing(true)
             callElectron('getDashboardStats')
               .then((data) => {
-                setStats(data.stats || emptyStats)
-                setAttendanceSummary(data.attendanceSummary || emptySummary)
-                setAttendanceTrend(data.attendanceTrend || [])
+                applyDashboardData(data)
                 setError(null)
               })
               .catch((e) => setError(formatUserError(e, 'Could not load the dashboard.')))
@@ -242,66 +235,42 @@ export default function Dashboard() {
 
       {showEmployees ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-lg border border-border bg-card p-5">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted" />
-            <h2 className="text-sm font-semibold text-foreground">Today&apos;s attendance</h2>
+          <AttendanceTrendChart data={attendanceTrendDetailed} loading={loading} />
+          <AttendanceBreakdownChart summary={attendanceSummary} loading={loading} />
+          <AttendanceHeatmap heatmap={attendanceHeatmap} loading={loading} />
+          <DepartmentChart data={employeesByDepartment} loading={loading} />
+          <EmploymentTypeChart data={employmentTypes} loading={loading} />
+          <div className="flex items-end">
+            <Link to="/attendance" className="text-xs text-accent hover:underline">
+              View full attendance table →
+            </Link>
           </div>
-          <p className="mt-1 text-xs text-muted">
-            {loading
-              ? 'Loading…'
-              : `${attendanceSummary.attendanceRate}% rate · ${attendanceSummary.present} present · ${attendanceSummary.absent} absent`}
-          </p>
-          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-            {[
-              ['Present', attendanceSummary.present],
-              ['Absent', attendanceSummary.absent],
-              ['Sunday off', attendanceSummary.sundayOff],
-              ['Half day', attendanceSummary.halfDay],
-              ['Roster', attendanceSummary.total],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-md bg-sidebar/50 px-3 py-2">
-                <dt className="text-xs text-muted">{label}</dt>
-                <dd className="mt-0.5 font-semibold text-foreground">
-                  {loading ? '—' : value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <Link to="/attendance" className="mt-4 inline-block text-xs text-accent hover:underline">
-            View attendance table →
-          </Link>
-        </section>
+        </div>
+      ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-5">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-muted" />
-            <h2 className="text-sm font-semibold text-foreground">7-day attendance rate</h2>
+      {showPayroll ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PayrollStatusChart data={payrollStatus} loading={loading} />
+          <div className="flex items-end">
+            <Link to="/payroll" className="text-xs text-accent hover:underline">
+              Open payroll →
+            </Link>
           </div>
-          <p className="mt-1 text-xs text-muted">Share of active roster with a punch each day</p>
-          <div className="mt-4">
-            {loading ? (
-              <p className="text-sm text-muted">Loading trend…</p>
-            ) : (
-              <Sparkline points={attendanceTrend} />
-            )}
-          </div>
-        </section>
-      </div>
+        </div>
       ) : null}
 
       {showDevices ? (
-      <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold text-foreground">Biometric devices</h2>
-        <p className="mt-1 text-xs text-muted">
-          {loading
-            ? 'Loading device status…'
-            : `${stats.devicesOnline} of ${stats.devicesTotal} enabled devices online`}
-        </p>
-        <Link to="/settings/devices" className="mt-3 inline-block text-xs text-accent hover:underline">
-          Manage devices →
-        </Link>
-      </section>
+        <section className="rounded-lg border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground">Biometric devices</h2>
+          <p className="mt-1 text-xs text-muted">
+            {loading
+              ? 'Loading device status…'
+              : `${stats.devicesOnline} of ${stats.devicesTotal} enabled devices online`}
+          </p>
+          <Link to="/settings/devices" className="mt-3 inline-block text-xs text-accent hover:underline">
+            Manage devices →
+          </Link>
+        </section>
       ) : null}
     </div>
   )
